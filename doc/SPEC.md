@@ -337,6 +337,21 @@ snapshot to compute whether it is out of date.
 
 ## 8. Platform and quality requirements
 
+- **Required UI reference:** use
+  [`doc/concepts/ramble-ui-concept-final.png`](concepts/ramble-ui-concept-final.png)
+  as the primary reference for UI layout and visual feel. Review this image before
+  designing or implementing the interface, and compare implementation screenshots
+  against it during visual review.
+- Preserve the reference's compact floating-window proportions, single toolbar,
+  side-by-side source and message panes, dense source rows, bottom composer and
+  rebuild controls, and collapsible session-style section. Match its dark graphite
+  surfaces, restrained mint accents, typography, spacing, subtle borders, and
+  speech-bubble branding. Carry this visual language into the light theme and
+  states not pictured. Adapt dimensions for readability, accessibility, and native
+  platform conventions while retaining the compact layout and overall feel.
+- The image guides presentation; the behavior and acceptance criteria in this
+  specification remain required, including controls or states not visible in the
+  concept. Use the supplied vector brand assets for the implemented logo.
 - The UI must look beautiful: polished, cohesive, and intentionally designed,
   not a generic settings form or bare developer-tool prototype. Visual quality
   is a core product requirement, not optional post-MVP cleanup.
