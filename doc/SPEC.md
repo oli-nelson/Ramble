@@ -301,10 +301,10 @@ Reference: https://opencode.ai/v2/docs/cli (consulted 2026-10-24).
 - Copy is user initiated. Do not read clipboard content, auto-paste, or clear the
   clipboard later. Acknowledge that clipboard history tools may retain copies.
 
-## 7. Proposed implementation architecture
+## 7. Implementation architecture
 
-Recommendation, not yet an approved dependency commitment: Tauri 2 + React +
-TypeScript frontend, with a Rust native backend. This fits a lightweight desktop
+Approved stack (2026-10-24): Tauri 2 + React + TypeScript frontend, with a Rust
+native backend. This fits a lightweight desktop
 window, global shortcuts, clipboard access, and native child-process management.
 
 - Frontend: capture/edit UI, split preview, style editor, run state, accessibility.
@@ -366,6 +366,14 @@ snapshot to compute whether it is out of date.
   Windows ARM64 are follow-up candidates, pending user confirmation. Exact minimum
   OS versions, signing/notarization, and distribution are pre-release decisions.
 
+### 8.1 Selected visual identity
+
+The selected Ramble logo direction is option 4 from the icon exploration sheet:
+a speech bubble with three thought-lines converging into one. Reusable vector,
+wordmark, monochrome, raster, and application-icon assets and their usage guidance
+live in [`brand/README.md`](brand/README.md). This replaces the leaf
+placeholder in earlier UI concepts when application branding is implemented.
+
 ## 9. Acceptance criteria
 
 1. On both operating systems, a registered hotkey focuses a floating window above
@@ -403,7 +411,7 @@ snapshot to compute whether it is out of date.
 
 ## 10. Suggested implementation sequence
 
-1. Confirm architecture, keyboard defaults, draft persistence policy, supported
+1. Use the approved stack; confirm keyboard defaults, draft persistence policy, supported
    CPU/OS targets, and actual harness isolation capabilities. Verify CLI versions
    and record supported invocations without building the full UI first.
 2. Implement the native window/hotkey lifecycle and capture/edit UI with a fake

@@ -1,15 +1,16 @@
 # Ramble — Technical Design
 
-Status: proposed implementation design; no application code or dependencies exist.
+Status: implementation design with an approved stack; no application code or dependencies exist.
 
 `SPEC.md` owns product behavior and acceptance criteria. This document describes
-how to implement them; it does not silently approve the proposed stack or change
-the product contract. Exact CLI invocations remain subject to version-specific
-verification. `AGENTS.md` contains development workflow only.
+how to implement them using the approved stack; it does not change the product
+contract. Exact CLI invocations remain subject to version-specific
+verification. `../AGENTS.md` contains development workflow only.
 
 ## 1. Architecture
 
-Proposed stack:
+Approved stack (2026-10-24): Tauri 2 + React + TypeScript + Rust.
+Supporting tooling and responsibilities:
 
 | Layer | Technology | Responsibility |
 | --- | --- | --- |
@@ -19,8 +20,8 @@ Proposed stack:
 | Execution | Rust / Tokio | Validation, prompt construction, adapters, process supervision |
 | Tests | Rust tests, Vitest, React Testing Library, Playwright | Native units, UI units, browser-level flows |
 
-These are proposed tool choices, not installed dependencies. Select exact versions
-and official Tauri plugins during implementation; commit dependency lockfiles.
+The stack is approved; dependencies are not yet installed. Finalize supporting
+tooling, exact versions, and official Tauri plugins during implementation; commit dependency lockfiles.
 Browser tests do not replace native desktop validation.
 
 ```text
@@ -405,7 +406,7 @@ then add OpenCode, Codex, and Claude adapters behind capability gates. Use CI fo
 offline tests and OS-native unit suites; never require private model credentials
 in ordinary CI. Keep real-model smoke tests opt-in.
 
-Before release, resolve stack approval, actual supported CLI versions, minimum OS
+Before release, resolve actual supported CLI versions, minimum OS
 versions/CPU targets, app identifier, signing/notarization, and distribution. Track
-product decisions in `SPEC.md`; record verified developer commands in `AGENTS.md`
+product decisions in `SPEC.md`; record verified developer commands in `../AGENTS.md`
 once implementation establishes them. No build/test commands are defined yet.

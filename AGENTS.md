@@ -2,7 +2,7 @@
 
 ## Source of truth
 
-- Read `SPEC.md` before working. Keep product requirements, architecture proposals,
+- Read `doc/SPEC.md` before working. Keep product requirements, architecture proposals,
   acceptance criteria, and unresolved product decisions there—not in this file.
 - Keep this file limited to actionable development workflow and repository
   knowledge that helps future sessions. Do not duplicate the specification or
