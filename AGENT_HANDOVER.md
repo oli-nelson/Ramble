@@ -404,3 +404,11 @@ keep product requirements in `doc/SPEC.md` and technical design in `doc/TECH_SPE
 - Next: review rendered documentation and update installation/support claims when
   published packages and native manual validation are available. Staged user images
   were left untouched; no commits or staging performed.
+
+## 2026-10-25 — Windows running-app enumeration compilation fix
+- Changed: explicitly type the application vector as `Vec<Application>` before
+  passing it through EnumWindows' opaque callback data; fixes E0282 at sorting.
+  Consolidated the Windows compilation fixes in Unreleased.
+- Validated on macOS arm64: 59 offline native tests, rustfmt and diff checks pass.
+  Only the macOS target is installed; Windows compilation remains unvalidated locally.
+- Next: rerun hosted Windows validation. No commits or pushes.

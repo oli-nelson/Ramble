@@ -251,7 +251,7 @@ unsafe extern "system" fn collect(hwnd: HWND, data: LPARAM) -> i32 {
     1
 }
 pub fn applications() -> Vec<Application> {
-    let mut apps = Vec::new();
+    let mut apps: Vec<Application> = Vec::new();
     unsafe {
         EnumWindows(
             Some(collect),
