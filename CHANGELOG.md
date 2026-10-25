@@ -21,3 +21,5 @@ a fresh Unreleased section. Released versions are listed newest first.
   error recovery intact; restore secondary controls when switched off.
 - Add tested, manually requested macOS and Windows release packaging, with changelog
   promotion and release notes only after all automated release checks pass.
+- Fix a Windows compilation error in CLI process creation while preserving hidden
+  console windows and process-tree containment.

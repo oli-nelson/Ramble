@@ -127,7 +127,9 @@ pub async fn execute_captured(
     {
         // process-wrap creates suspended, assigns the Job Object, then resumes.
         // Assignment failure is a spawn error, not an uncontained fallback.
-        command.wrap(CreationFlags(0x08000000)); // CREATE_NO_WINDOW
+        command.wrap(CreationFlags(
+            windows::Win32::System::Threading::CREATE_NO_WINDOW,
+        ));
         command.wrap(JobObject);
     }
     let mut child = command.spawn().map_err(|_| ProcessError::SpawnFailed)?;

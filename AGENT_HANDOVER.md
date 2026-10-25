@@ -358,4 +358,13 @@ keep product requirements in `doc/SPEC.md` and technical design in `doc/TECH_SPE
   resizing interaction, or Windows validation. No commits or pushes.
 - Next: copy unsaved notes before restarting the native host; toggle the toolbar
   switch, resize compact to 360×280, reopen/summon, then exit compact and verify the
-  normal minimum. Check placement/monitor clamping natively and Windows separately.
+   normal minimum. Check placement/monitor clamping natively and Windows separately.
+
+## 2026-10-25 — Windows process creation compilation fix
+- Changed: pass the typed `CREATE_NO_WINDOW` constant to process-wrap 10's
+  `CreationFlags`; add matching Windows-only `windows` dependency for both desktop
+  and offline builds. Keep Job Object containment unchanged; update Unreleased.
+- Validated on macOS arm64: 59 offline native tests, strict all-target/all-feature
+  Clippy, rustfmt and diff checks. No Windows target installed; Windows compilation
+  and execution are not locally validated.
+- Next: rerun hosted Windows validation/release gates. No commits or pushes.
