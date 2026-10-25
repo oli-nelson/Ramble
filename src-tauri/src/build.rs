@@ -166,7 +166,10 @@ mod tests {
             instruction: "Make shorter".into(),
         });
         let p = prompt(&r).unwrap();
-        assert!(p.contains("\"previousText\":\"Old result\""));
+        let data: serde_json::Value =
+            serde_json::from_str(p.strip_prefix(PREAMBLE).unwrap()).unwrap();
+        assert_eq!(data["revision"]["previousText"], "Old result");
+        assert_eq!(data["revision"]["instruction"], "Make shorter");
         assert!(!p.contains(&r.run_id));
         assert!(!p.contains(&r.draft_id));
     }

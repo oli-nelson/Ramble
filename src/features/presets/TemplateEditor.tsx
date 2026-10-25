@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal } from '../../ui/Modal';
 import { validateTemplate } from '../../domain/templates';
 import type { CommandTemplate } from '../../domain/types';
+import { actionEnter } from '../../ui/actionEnter';
 
 export function TemplateEditor({ original, onSave, onClose }: { original?: CommandTemplate; onSave: (template: CommandTemplate) => Promise<void>; onClose: () => void }) {
   const [template, setTemplate] = useState<CommandTemplate>(() => original ? structuredClone(original) : {
@@ -10,14 +11,14 @@ export function TemplateEditor({ original, onSave, onClose }: { original?: Comma
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   return <Modal title={original ? 'Edit command template' : 'New command template'} onClose={onClose} wide>
-    <form onSubmit={async e => {
-      e.preventDefault(); const error = validateTemplate(template);
+    <form onKeyDown={e => { if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) actionEnter(e, () => { if (!saving) e.currentTarget.requestSubmit(); }); }} onSubmit={async e => {
+      e.preventDefault(); if (saving) return; const error = validateTemplate(template);
       if (error) { setError(error); return; }
       setSaving(true); setError('');
       try { await onSave({ ...template, name: template.name.trim(), command: template.command.trim(), version: original ? original.version + 1 : 1 }); onClose(); }
       catch (e) { setError((e as Error).message); } finally { setSaving(false); }
     }}>
-      <p className="description">One command, with values supplied by the selected preset. Use any installed CLI or script runtime.</p>
+      <p className="description">One command, with values supplied by the selected preset. Enter saves; Shift+Enter adds a line. Use any installed CLI or script runtime.</p>
       <label>Template name<input autoFocus required maxLength={80} value={template.name} placeholder="My writing CLI" onChange={e => setTemplate({ ...template, name: e.target.value })} /></label>
       <label>Command template<textarea className="command-template" required rows={6} spellCheck={false} value={template.command} placeholder={'my-cli --model {{MODEL_ID}} --effort {{REASONING_EFFORT}} {{PROMPT}}'} onChange={e => setTemplate({ ...template, command: e.target.value })} /></label>
       <p className="hint">{'Variables: {{MODEL_ID}}, {{REASONING_EFFORT}}, {{PROMPT}}. Quote paths/arguments containing spaces. Values are injected after parsing and never interpreted as shell syntax.'}</p>

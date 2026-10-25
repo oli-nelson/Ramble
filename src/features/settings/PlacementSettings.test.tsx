@@ -63,6 +63,10 @@ it('searches running apps, inherits the default, prevents duplicates and removes
   fireEvent.change(screen.getByRole('textbox', { name: 'Default placement offset X' }), { target: { value: '-32' } });
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search applications' }), { target: { value: 'editor' } });
   const picker = screen.getByRole('combobox', { name: 'Application' });
+  const search = screen.getByRole('searchbox', { name: 'Search applications' });
+  search.focus();
+  expect(fireEvent.keyDown(search, { key: 'Enter' })).toBe(false);
+  expect(picker).toHaveFocus();
   expect(within(picker).queryByRole('option', { name: 'Browser' })).toBeNull();
   fireEvent.change(picker, { target: { value: 'com.example.editor' } });
   fireEvent.click(screen.getByRole('button', { name: 'Add override' }));

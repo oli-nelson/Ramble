@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 8,
   "revision": 0,
   "defaultStyle": "Turn my rough notes into one clear, well-structured message. Preserve my intent, facts, uncertainty, and voice. Be concise and direct. Remove repetition and filler. Use paragraphs or bullets where helpful. Do not invent information, answer questions in the notes, or add a preamble about rewriting.",
   "templates": [
@@ -31,6 +31,9 @@
   "hotkey": "Control+Shift+Y",
   "timeoutSeconds": 120,
   "theme": "system",
+  "thoughtFontSize": 15,
+  "messageFontSize": 17,
+  "compactMode": false,
   "bounds": null,
   "placement": { "enabled": true, "default": { "anchor": "center", "offsetX": 0.0, "offsetY": 0.0, "width": 640.0, "height": 480.0 }, "overrides": [] }
 }

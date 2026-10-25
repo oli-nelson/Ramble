@@ -60,6 +60,9 @@ pub struct Settings {
     pub hotkey: String,
     pub timeout_seconds: u64,
     pub theme: String,
+    pub thought_font_size: u32,
+    pub message_font_size: u32,
+    pub compact_mode: bool,
     pub bounds: Option<Bounds>,
     pub placement: crate::placement::PlacementSettings,
 }
@@ -72,8 +75,39 @@ impl Default for Settings {
 }
 
 impl Settings {
+    pub fn minimum_window_size(&self) -> (f64, f64) {
+        if self.compact_mode {
+            (360.0, 280.0)
+        } else {
+            (560.0, 420.0)
+        }
+    }
+
+    pub fn normalize_window_bounds(&mut self) {
+        let (width, height) = self.minimum_window_size();
+        if let Some(bounds) = &mut self.bounds {
+            bounds.width = bounds.width.max(width);
+            bounds.height = bounds.height.max(height);
+        }
+    }
+
+    pub fn window_placement(&self) -> crate::placement::PlacementSettings {
+        let mut placement = self.placement.clone();
+        if self.compact_mode {
+            // Compact windows retain their user-chosen size across summons.
+            // Normal-mode sizing rules remain saved, not silently rewritten.
+            placement.default.width = None;
+            placement.default.height = None;
+            for override_ in &mut placement.overrides {
+                override_.rule.width = None;
+                override_.rule.height = None;
+            }
+        }
+        placement
+    }
+
     pub fn validate(&self) -> Result<(), String> {
-        if self.schema_version != 6 {
+        if self.schema_version != 8 {
             return Err("Unsupported settings schema; update Ramble before saving.".into());
         }
         if self.templates.is_empty() || self.templates.len() > 100 {
@@ -107,6 +141,13 @@ impl Settings {
         }
         if self.presets.len() > 100 {
             return Err("Keep at most 100 presets.".into());
+        }
+        if !(12..=28).contains(&self.thought_font_size)
+            || !(12..=28).contains(&self.message_font_size)
+        {
+            return Err(
+                "Thought and message font sizes must be whole numbers from 12 to 28 px.".into(),
+            );
         }
         let mut ids = HashSet::new();
         for p in &self.presets {
@@ -153,9 +194,10 @@ impl Settings {
             return Err("Select an existing preset.".into());
         }
         if let Some(b) = &self.bounds {
+            let (minimum_width, minimum_height) = self.minimum_window_size();
             if ![b.x, b.y, b.width, b.height].iter().all(|v| v.is_finite())
-                || !(560.0..=10000.0).contains(&b.width)
-                || !(420.0..=10000.0).contains(&b.height)
+                || !(minimum_width..=10000.0).contains(&b.width)
+                || !(minimum_height..=10000.0).contains(&b.height)
             {
                 return Err("Invalid saved window bounds.".into());
             }
@@ -423,6 +465,16 @@ fn decode_settings(bytes: &[u8]) -> Result<Settings, String> {
         }
         value["schemaVersion"] = 6.into();
     }
+    if value["schemaVersion"] == 6 {
+        let defaults = Settings::default();
+        value["thoughtFontSize"] = defaults.thought_font_size.into();
+        value["messageFontSize"] = defaults.message_font_size.into();
+        value["schemaVersion"] = 7.into();
+    }
+    if value["schemaVersion"] == 7 {
+        value["compactMode"] = false.into();
+        value["schemaVersion"] = 8.into();
+    }
     serde_json::from_value(value).map_err(|_| "Unsupported settings shape.".into())
 }
 
@@ -506,7 +558,7 @@ mod tests {
         fs::write(directory.path().join("settings.json"), &original).unwrap();
         let mut store = Store::load(directory.path());
         assert!(!store.envelope.read_only);
-        assert_eq!(store.envelope.settings.schema_version, 6);
+        assert_eq!(store.envelope.settings.schema_version, 8);
         assert_eq!(store.envelope.settings.hotkey, "Control+Alt+K");
         assert_eq!(store.envelope.settings.default_style, "Custom saved style");
         assert_eq!(
@@ -527,7 +579,7 @@ mod tests {
                 .envelope
                 .settings
                 .schema_version,
-            6
+            8
         );
     }
 
@@ -782,6 +834,125 @@ mod tests {
                 None
             );
         }
+    }
+
+    #[test]
+    fn schema_six_adds_font_preferences_without_changing_saved_settings() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut expected = Settings {
+            hotkey: "Control+Alt+K".into(),
+            default_style: "Custom style".into(),
+            ..Default::default()
+        };
+        expected.templates[0].command = "custom-writer {{PROMPT}}".into();
+        expected.presets[0].parameters.model = Some("my-model".into());
+        expected.placement.default.width = Some(900.0);
+        let mut legacy = serde_json::to_value(&expected).unwrap();
+        legacy["schemaVersion"] = 6.into();
+        legacy.as_object_mut().unwrap().remove("thoughtFontSize");
+        legacy.as_object_mut().unwrap().remove("messageFontSize");
+        let original = serde_json::to_vec(&legacy).unwrap();
+        fs::write(directory.path().join("settings.json"), &original).unwrap();
+        let mut store = Store::load(directory.path());
+        assert!(!store.envelope.read_only);
+        assert_eq!(store.envelope.settings, expected);
+        expected.thought_font_size = 12;
+        expected.message_font_size = 28;
+        store.update(0, expected.clone()).unwrap();
+        assert_eq!(
+            fs::read(directory.path().join("settings.backup.json")).unwrap(),
+            original
+        );
+        expected.revision = 1;
+        assert_eq!(Store::load(directory.path()).envelope.settings, expected);
+    }
+
+    #[test]
+    fn font_preferences_reject_out_of_range_and_noninteger_values() {
+        for key in ["thoughtFontSize", "messageFontSize"] {
+            for invalid in [
+                serde_json::json!(11),
+                serde_json::json!(29),
+                serde_json::json!(15.5),
+                serde_json::json!(-1),
+                serde_json::Value::Null,
+            ] {
+                let mut json = serde_json::to_value(Settings::default()).unwrap();
+                json[key] = invalid;
+                if let Ok(settings) = serde_json::from_value::<Settings>(json) {
+                    assert!(settings.validate().is_err());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn schema_seven_adds_compact_mode_without_changing_saved_preferences() {
+        let mut expected = Settings {
+            thought_font_size: 22,
+            message_font_size: 28,
+            hotkey: "Control+Alt+K".into(),
+            ..Default::default()
+        };
+        expected.templates[0].command = "custom-writer {{PROMPT}}".into();
+        let mut legacy = serde_json::to_value(&expected).unwrap();
+        legacy["schemaVersion"] = 7.into();
+        legacy.as_object_mut().unwrap().remove("compactMode");
+        let migrated = decode_settings(&serde_json::to_vec(&legacy).unwrap()).unwrap();
+        assert_eq!(migrated, expected);
+        migrated.validate().unwrap();
+        let directory = tempfile::tempdir().unwrap();
+        fs::write(
+            directory.path().join("settings.json"),
+            serde_json::to_vec(&legacy).unwrap(),
+        )
+        .unwrap();
+        let mut store = Store::load(directory.path());
+        expected.compact_mode = true;
+        store.update(0, expected.clone()).unwrap();
+        expected.revision = 1;
+        assert_eq!(Store::load(directory.path()).envelope.settings, expected);
+    }
+
+    #[test]
+    fn compact_window_bounds_and_placement_preserve_normal_rules() {
+        let mut settings = Settings {
+            compact_mode: true,
+            bounds: Some(Bounds {
+                x: -10.0,
+                y: 30.0,
+                width: 360.0,
+                height: 280.0,
+            }),
+            ..Default::default()
+        };
+        settings
+            .placement
+            .overrides
+            .push(crate::placement::ApplicationOverride {
+                application_id: "editor".into(),
+                application_name: "Editor".into(),
+                rule: crate::placement::PlacementRule {
+                    width: Some(800.0),
+                    height: Some(600.0),
+                    ..Default::default()
+                },
+            });
+        settings.validate().unwrap();
+        assert_eq!(settings.minimum_window_size(), (360.0, 280.0));
+        let compact_placement = settings.window_placement();
+        assert_eq!(compact_placement.default.width, None);
+        assert_eq!(compact_placement.overrides[0].rule.height, None);
+        assert_eq!(settings.placement.default.width, Some(640.0));
+        assert_eq!(settings.placement.overrides[0].rule.height, Some(600.0));
+        settings.compact_mode = false;
+        assert!(settings.validate().is_err());
+        settings.normalize_window_bounds();
+        settings.validate().unwrap();
+        assert_eq!(settings.minimum_window_size(), (560.0, 420.0));
+        assert_eq!(settings.bounds.as_ref().unwrap().width, 560.0);
+        assert_eq!(settings.bounds.as_ref().unwrap().height, 420.0);
+        assert_eq!(settings.window_placement(), settings.placement);
     }
 
     #[test]

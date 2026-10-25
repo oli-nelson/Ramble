@@ -30,12 +30,13 @@ for (const platform of [{ agent: 'Mac', key: 'Meta', hint: '⌘ Enter' }, { agen
     await page.keyboard.press(`${platform.key}+Shift+Enter`);
     expect(await page.evaluate(() => (window as typeof window & { shortcutCalls: string[] }).shortcutCalls)).toEqual(['copy', 'hide-and-restore-focus', 'copy', 'hide-restore-and-paste']);
     await page.keyboard.press('Escape');
-    expect(await page.evaluate(() => (window as typeof window & { shortcutCalls: string[] }).shortcutCalls)).toEqual(['copy', 'hide-and-restore-focus', 'copy', 'hide-restore-and-paste', 'hide-and-restore-focus']);
+    expect(await page.evaluate(() => (window as typeof window & { shortcutCalls: string[] }).shortcutCalls)).toEqual(['copy', 'hide-and-restore-focus', 'copy', 'hide-restore-and-paste']);
     expect(await page.evaluate(() => (window as typeof window & { copiedMessage: string }).copiedMessage)).toBe('Literal text copied before hiding.');
     await page.screenshot({ path: testInfo.outputPath('shortcut-hint.png') });
-    await page.getByRole('button', { name: 'Back to thoughts', exact: true }).click();
     await expect(page.getByText(`${platform.hint} to build`, { exact: true })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Add a thought', exact: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    expect(await page.evaluate(() => (window as typeof window & { shortcutCalls: string[] }).shortcutCalls)).toEqual(['copy', 'hide-and-restore-focus', 'copy', 'hide-restore-and-paste', 'hide-and-restore-focus']);
   });
 }
 
@@ -102,6 +103,69 @@ test('capture, inline edits, undo, immutable builds, styles and one-off edits', 
   await page.getByRole('button', { name: 'Rebuild', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Additional edit for this rebuild', exact: true })).toHaveValue('');
   await expect(page.getByText('Ready', { exact: true })).toBeVisible();
+});
+
+test('consistent Enter actions, latest-message revisions, compact thoughts and independent font sizes', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 560, height: 420 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.evaluate(async () => {
+    const path = '/src/native/client.ts'; const { api } = await import(path);
+    const fixture = window as typeof window & { requests: import('../../src/domain/types').BuildRequest[] };
+    fixture.requests = [];
+    api.build = async (request: import('../../src/domain/types').BuildRequest) => {
+      fixture.requests.push(request);
+      return { runId: request.runId, draftId: request.draftId, kind: 'succeeded', text: `Message ${fixture.requests.length}`, durationMs: 1 };
+    };
+  });
+  const composer = page.getByRole('textbox', { name: 'Add a thought', exact: true });
+  await composer.fill('First line');
+  await composer.press('Shift+Enter'); await composer.press('a');
+  await expect(composer).toHaveValue('First line\na');
+  await composer.press('Enter');
+  await expect(page.locator('.entry')).toHaveCount(1);
+  await thought(page, 'Another thought');
+  await expect(page.locator('.entry').first()).toHaveCSS('padding-top', '10px');
+  await page.getByRole('button', { name: 'Edit thought 1', exact: true }).click();
+  const inline = page.getByRole('textbox', { name: 'Edit thought 1', exact: true });
+  await inline.fill('Edited thought'); await inline.press('Shift+Enter'); await inline.press('b');
+  await expect(inline).toHaveValue('Edited thought\nb');
+  await inline.press('Enter');
+  await expect(inline).toHaveCount(0);
+  await expect(page.locator('.entry p').first()).toHaveText('Edited thought\nb');
+  await page.screenshot({ path: testInfo.outputPath('compact-thoughts.png') });
+  await composer.press('Control+Enter');
+  await expect(page.getByTestId('message')).toHaveText('Message 1');
+  const edit = page.getByRole('textbox', { name: 'Additional edit for this rebuild', exact: true });
+  await edit.fill('Shorter'); await edit.press('Shift+Enter'); await edit.press('c');
+  await expect(edit).toHaveValue('Shorter\nc');
+  await expect(page.getByTestId('message')).toHaveText('Message 1');
+  await edit.press('Enter');
+  await expect(page.getByTestId('message')).toHaveText('Message 2');
+  await edit.fill('Warmer'); await edit.press('Enter');
+  await expect(page.getByTestId('message')).toHaveText('Message 3');
+  const revisions = await page.evaluate(() => (window as typeof window & { requests: import('../../src/domain/types').BuildRequest[] }).requests.map(r => r.revision));
+  expect(revisions).toEqual([null, { previousText: 'Message 1', instruction: 'Shorter\nc' }, { previousText: 'Message 2', instruction: 'Warmer' }]);
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('spinbutton', { name: 'Thought font size (px)', exact: true }).fill('28');
+  await page.getByRole('spinbutton', { name: 'Message font size (px)', exact: true }).fill('24');
+  const savedStyle = page.getByRole('textbox', { name: /Saved default style/ });
+  await savedStyle.fill('Concise'); await savedStyle.press('Shift+Enter'); await savedStyle.press('d');
+  await expect(savedStyle).toHaveValue('Concise\nd');
+  await savedStyle.press('Enter');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByTestId('message')).toHaveCSS('font-size', '24px');
+  await expect(page.getByText('Ready', { exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('larger-message.png') });
+  await page.keyboard.press('Escape');
+  await expect(composer).toBeFocused();
+  await expect(composer).toHaveCSS('font-size', '28px');
+  expect(await composer.evaluate(node => node.clientHeight >= parseFloat(getComputedStyle(node).lineHeight) + parseFloat(getComputedStyle(node).paddingTop) + parseFloat(getComputedStyle(node).paddingBottom))).toBe(true);
+  await expect(page.locator('.entry p').first()).toHaveCSS('font-size', '28px');
+  await page.getByRole('button', { name: 'Edit thought 1', exact: true }).click();
+  await expect(inline).toHaveCSS('font-size', '28px');
+  await inline.press('Escape');
+  await page.screenshot({ path: testInfo.outputPath('larger-thoughts.png') });
 });
 
 test('keyboard composition, cancellation and new-draft confirmation', async ({ page }) => {
@@ -242,6 +306,8 @@ for (const size of [{ width: 640, height: 480 }, { width: 560, height: 420 }]) {
     await page.getByRole('textbox', { name: 'Default placement width', exact: true }).fill('800');
     await page.getByRole('textbox', { name: 'Default placement height', exact: true }).fill('600');
     await page.getByRole('searchbox', { name: 'Search applications' }).fill('Safari');
+    await page.getByRole('searchbox', { name: 'Search applications' }).press('Enter');
+    await expect(page.getByRole('combobox', { name: 'Application', exact: true })).toBeFocused();
     await page.getByRole('combobox', { name: 'Application', exact: true }).selectOption('com.apple.Safari');
     await page.getByRole('button', { name: 'Add override' }).click();
     const offset = page.getByRole('textbox', { name: 'Safari placement offset X' });

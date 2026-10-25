@@ -61,8 +61,7 @@ fn show_on_main(app: &tauri::AppHandle, intent: ShowIntent) {
             .unwrap_or_else(|e| e.into_inner())
             .envelope
             .settings
-            .placement
-            .clone();
+            .window_placement();
         // Capture BEFORE show/unminimize/set_focus: afterwards the foreground app is Ramble.
         let captured = desktop_platform::capture_focus(settings.enabled);
         let target = &captured.target;
@@ -161,19 +160,33 @@ fn get_settings(state: tauri::State<'_, DesktopState>) -> Result<SettingsEnvelop
 }
 
 #[tauri::command]
-fn update_settings(
+async fn update_settings(
     app: tauri::AppHandle,
-    state: tauri::State<'_, DesktopState>,
+    expected_revision: u64,
+    settings: Settings,
+) -> Result<SettingsEnvelope, String> {
+    let handle = app.clone();
+    on_main(app, move || {
+        update_settings_on_main(&handle, expected_revision, settings)
+    })
+    .await?
+}
+
+fn update_settings_on_main(
+    app: &tauri::AppHandle,
     expected_revision: u64,
     mut settings: Settings,
 ) -> Result<SettingsEnvelope, String> {
-    settings.validate()?;
+    let state = app.state::<DesktopState>();
+    save_bounds(app);
     let mut store = state.settings.lock().map_err(|_| "Settings unavailable.")?;
     if expected_revision != store.envelope.settings.revision {
         return Err("SettingsConflict: reopen Settings and retry.".into());
     }
     let old = store.envelope.settings.hotkey.clone();
     settings.bounds = store.envelope.settings.bounds.clone();
+    settings.normalize_window_bounds();
+    settings.validate()?;
     if old != settings.hotkey {
         app.global_shortcut().register(settings.hotkey.as_str()).map_err(|_| "Shortcut unavailable or invalid. Choose another shortcut; the previous binding is still active.")?;
     }
@@ -190,6 +203,12 @@ fn update_settings(
                     store.envelope.warning = None;
                 }
             }
+            drop(store);
+            if let Some(window) = app.get_webview_window("main") {
+                if apply_window_mode(&window, &settings).is_err() {
+                    envelope.warning = Some("Settings saved, but the native window minimum could not be updated. Restart Ramble to apply the window mode.".into());
+                }
+            }
             Ok(envelope)
         }
         Err(error) => {
@@ -199,6 +218,30 @@ fn update_settings(
             Err(error)
         }
     }
+}
+
+fn apply_window_mode(window: &tauri::WebviewWindow, settings: &Settings) -> Result<(), String> {
+    let (width, height) = settings.minimum_window_size();
+    window
+        .set_min_size(Some(tauri::LogicalSize::new(width, height)))
+        .map_err(|_| "Could not update window minimum.")?;
+    let size = window
+        .inner_size()
+        .map_err(|_| "Could not read window size.")?;
+    let scale = window
+        .scale_factor()
+        .map_err(|_| "Could not read window scale.")?;
+    let current_width = size.width as f64 / scale;
+    let current_height = size.height as f64 / scale;
+    if current_width < width || current_height < height {
+        window
+            .set_size(tauri::LogicalSize::new(
+                current_width.max(width),
+                current_height.max(height),
+            ))
+            .map_err(|_| "Could not restore regular window minimum.")?;
+    }
+    Ok(())
 }
 
 #[derive(serde::Serialize)]
@@ -480,6 +523,7 @@ pub fn run() {
             let store = Store::load(&directory);
             let hotkey = store.envelope.settings.hotkey.clone();
             let bounds = store.envelope.settings.bounds.clone();
+            let window_settings = store.envelope.settings.clone();
             app.manage(DesktopState { settings: Mutex::new(store), builds: Coordinator::default(), dirty: AtomicBool::new(false), quitting: AtomicBool::new(false), last_application: Mutex::new(None), return_focus: Mutex::new(None), paste_epoch: AtomicU64::new(0), placement_message: Mutex::new(None) });
             let show_item = tauri::menu::MenuItem::with_id(app, "show", "Show Ramble", true, None::<&str>)?;
             let settings_item = tauri::menu::MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
@@ -499,6 +543,7 @@ pub fn run() {
                 app.state::<DesktopState>().settings.lock().unwrap().envelope.warning = Some("The global shortcut could not be registered. Use the tray/menu-bar entry to show Ramble, then choose a different shortcut in Settings.".into());
             }
             if let Some(window) = app.get_webview_window("main") {
+                let _ = apply_window_mode(&window, &window_settings);
                 if let Some(bounds) = bounds { let _ = window.set_size(tauri::LogicalSize::new(bounds.width, bounds.height)); let _ = window.set_position(tauri::LogicalPosition::new(bounds.x, bounds.y)); }
                 let handle = app.handle().clone();
                 window.on_window_event(move |event| { if let tauri::WindowEvent::CloseRequested { api, .. } = event { api.prevent_close(); hide_window(handle.clone()); } });

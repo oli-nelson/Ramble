@@ -11,7 +11,13 @@ floating title bar. These decisions supersede the original restricted-adapter
 allowlist/isolation-gate proposals in sections 6–7 below. The current runner
 compiles a saved template into literal argv/stdin, inherits native CLI auth and
 environment, uses a neutral cwd, and parses only final output. It is not a sandbox.
-Settings schema 6 adds default/per-app dimensions, seeded from saved bounds.
+Settings schema 8 adds a persisted `compactMode` flag, default false, preserving
+schemas 1–7 values. The toolbar saves it through the same optimistic settings IPC.
+Native settings saves capture current bounds, normalize them for the requested mode
+and apply window minimums on the desktop main thread after dropping the settings lock.
+Settings schema 7 added independent persisted `thoughtFontSize`/`messageFontSize`
+integers (12–28 px, defaults 15/17) and preserves all prior saved configuration.
+Settings schema 6 added default/per-app dimensions, seeded from saved bounds.
 Settings schema 5 removes harness-specific parser choices in favor of one response
 contract; schema 4 added single-string commands and reasoning effort, migrating
 old executable/argv records losslessly. Schema 3 added placement defaults.
@@ -429,7 +435,8 @@ macOS uses AppKit activation without Accessibility or force/all-window flags;
 Windows uses SetForegroundWindow (restoring a minimized target), without synthetic
 input or thread-input attachment. OS activation can be denied; never relaunch a
 closed target. Normal hide IPC does not explicitly reactivate another application.
-Escape now uses return-focus hide (but editor/dialog Escape still consumes it).
+Escape returns from Message to Thoughts without IPC; from Thoughts it uses
+return-focus hide. Editor/dialog Escape still consumes it first.
 
 `hide_restore_and_paste` is a narrow explicit-action IPC, not a general keyboard API.
 Preflight checks existing macOS AX trust, a live return target and Ramble foreground
@@ -457,6 +464,21 @@ Define semantic design tokens before building feature screens: surface/elevated
 surface, text/muted text, accent, border, focus, danger, spacing, typography,
 radii, shadows, and motion. Map both light/dark palettes to the same components.
 Use system fonts and a restrained icon set; avoid platform-dependent remote assets.
+Apply the saved sizes through scoped CSS variables: thought entries/composer/inline
+editing share one size, generated output uses the other. Keep typography out of
+prompt fingerprints and clipboard data. Compact entry rows use 10 px vertical padding.
+`ui/actionEnter.ts` centralizes plain Enter actions with Shift-newline, IME/keyCode
+229 and repeat guards. Settings/template forms use `requestSubmit()` to retain HTML
+validation and busy/read-only protection; modified global shortcuts stay separate.
+Compact styling is scoped by `data-compact` in `app/compact.css`, with specificity
+above the regular responsive rules. Keep core action names accessible even when text
+is visually reduced to icons; never hide failures/recovery actions or shrink saved
+text sizes. The mode does not enter draft snapshots or prompt fingerprints.
+`Settings::minimum_window_size()` defines 560×420 regular and 360×280 compact minima
+for native setup/settings saves and bounds validation. Compact `window_placement()`
+clears only cloned rule dimensions so summons retain the user's current size without
+rewriting saved placement defaults/overrides. On exit, normalize persisted bounds and
+grow undersized native windows to the regular minimum. No auto-shrink on entry.
 
 Use a 640 × 480 logical-pixel window with a 560 × 420 minimum. Thoughts and
 Message share the same workspace, with only the selected view visible. Building

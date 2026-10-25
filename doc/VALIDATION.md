@@ -55,9 +55,25 @@ This file tracks evidence, not product requirements. `SPEC.md` is authoritative.
   missing capture, hide failure and intervening app-switch suppression. macOS AppKit
   activation compiles; actual cross-app focus behavior and Windows remain unvalidated.
 - Message-only Shift+Command/Ctrl+Enter explicitly requests one guarded paste after
-  copying; Escape now returns focus without copying/pasting. Pure paste-gate tests
+  copying; Escape goes back from Message and hides/returns focus only from Thoughts.
+  Editor/dialog cancellation takes precedence. Pure paste-gate tests
   cover delayed/changed focus, released keys, timeout, epoch cancellation and one-shot
   authorization. Browser/UI tests mock input: no automated test sends real OS keys.
+- Plain Enter submits/saves/builds in text fields; Shift+Enter remains multiline.
+  UI/form tests cover repeat, IME/keyCode-229, read-only and HTML validation gates;
+  browser tests exercise actual newlines and Enter in inline/message edits/settings.
+  Consecutive revisions include the latest successful message; failed revisions
+  retain the previous successful target. Native prompt tests verify revision JSON.
+- Schema 7 migrates schemas 1–6 without changing custom configuration and persists
+  independent 12–28 px thought/message sizes. Native tests cover bounds/roundtrip;
+  browser tests verify computed sizes for entries/composer/inline editing/output,
+  compact row padding, and unchanged message freshness at 560×420.
+- Schema 8 adds off-by-default persisted Compact Mode. Tests cover migration and
+  restart persistence, draft/result/pending-edit retention, active builds, save failure,
+  read-only settings, native minimum/bounds policy and nonmutating placement sizing.
+  Light/dark Chromium workflows exercise the core flow, Settings, errors/diagnostic
+  actions and 28 px text at 360×280, including a simulated macOS toolbar gutter.
+  Actual native resizing/control placement and Windows still need manual checks.
 - Mount-only 400 ms text-bound wipe-ins for inserted thoughts and successful messages, with
   identical duration for short/long text, no replay on edits/navigation and reduced
   motion respected. Web Animation resources are cancelled on unmount.

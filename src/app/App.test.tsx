@@ -56,6 +56,62 @@ function success(request: BuildRequest, text = '  Final text\n```literal```  '):
 }
 
 describe('native-facing UI', () => {
+  it('persists Compact Mode, honors it on startup, and preserves draft/message edits when toggled', async () => {
+    vi.mocked(api.build).mockImplementation(async request => success(request));
+    await capture(); fireEvent.click(screen.getByRole('button', { name: 'Build message' }));
+    await screen.findByTestId('message');
+    const edit = screen.getByRole('textbox', { name: 'Additional edit for this rebuild' });
+    fireEvent.change(edit, { target: { value: 'Pending refinement' } });
+    const toggle = screen.getByRole('switch', { name: 'Compact Mode' });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+    expect(document.querySelector('main')).toHaveAttribute('data-compact', 'true');
+    expect(api.saveSettings).toHaveBeenCalledWith(expect.objectContaining({ compactMode: true }));
+    expect(edit).toHaveValue('Pending refinement');
+    expect(screen.getByTestId('message')).toHaveTextContent('Final text');
+    expect(screen.queryByText('Out of date', { exact: true })).toBeNull();
+    expect(api.build).toHaveBeenCalledTimes(1);
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
+    expect(edit).toHaveValue('Pending refinement');
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+    const saved = vi.mocked(api.saveSettings).mock.calls.at(-1)![0];
+    cleanup();
+    vi.mocked(api.getSettings).mockResolvedValue({ settings: saved, warning: null, readOnly: false });
+    render(<App />);
+    expect(await screen.findByRole('switch', { name: 'Compact Mode' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('textbox', { name: 'Add a thought' })).toHaveValue('');
+  });
+
+  it('keeps Compact Mode unchanged on save failure and disables its switch for read-only settings', async () => {
+    vi.mocked(api.saveSettings).mockRejectedValueOnce(Error('Could not save settings.'));
+    await capture();
+    const toggle = screen.getByRole('switch', { name: 'Compact Mode' });
+    fireEvent.click(toggle);
+    expect(await screen.findByText('Could not save settings.')).toBeVisible();
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    cleanup();
+    vi.mocked(api.getSettings).mockResolvedValue({ settings: defaultSettings(), warning: null, readOnly: true });
+    render(<App />);
+    expect(await screen.findByRole('switch', { name: 'Compact Mode' })).toBeDisabled();
+  });
+
+  it('does not cancel or replace a running build when switching Compact Mode', async () => {
+    let finish!: (outcome: BuildOutcome) => void;
+    vi.mocked(api.build).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    await capture(); fireEvent.click(screen.getByRole('button', { name: 'Build message' }));
+    const toggle = screen.getByRole('switch', { name: 'Compact Mode' });
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+    expect(api.cancel).not.toHaveBeenCalled(); expect(api.abandonRun).not.toHaveBeenCalled();
+    expect(api.build).toHaveBeenCalledTimes(1);
+    await act(async () => finish(success(vi.mocked(api.build).mock.calls[0][0])));
+    expect(screen.getByTestId('message')).toHaveTextContent('Final text');
+    expect(screen.queryByText('Out of date', { exact: true })).toBeNull();
+  });
+
   it('shortcut summon starts a fresh Thoughts draft, while ordinary reopening preserves the message', async () => {
     vi.mocked(isTauri).mockReturnValue(true);
     vi.mocked(api.build).mockImplementation(async request => success(request));
@@ -414,12 +470,12 @@ describe('native-facing UI', () => {
     await capture(); fireEvent.click(screen.getByRole('button', { name: 'Build message' }));
     await screen.findByTestId('message');
     fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
-    expect(await screen.findByText('Message copied, but Ramble couldn’t hide. Press Escape to retry.')).toBeVisible();
+    expect(await screen.findByText('Message copied, but Ramble couldn’t hide. Return to Thoughts and press Escape to hide.')).toBeVisible();
     expect(screen.getByTestId('message')).toHaveTextContent('Final text');
     expect(api.quit).not.toHaveBeenCalled();
   });
 
-  it('Escape returns focus without copying, pasting or quitting', async () => {
+  it('Escape in Thoughts hides and returns focus without copying, pasting or quitting', async () => {
     await capture();
     fireEvent.keyDown(window, { key: 'Escape' });
     await waitFor(() => expect(api.hideAndRestoreFocus).toHaveBeenCalledTimes(1));
@@ -427,6 +483,85 @@ describe('native-facing UI', () => {
     expect(api.copy).not.toHaveBeenCalled();
     expect(api.hideRestoreAndPaste).not.toHaveBeenCalled();
     expect(api.quit).not.toHaveBeenCalled();
+  });
+
+  it('Escape in Message returns to Thoughts, preserves pending edits and the active run, and never hides', async () => {
+    let finish!: (outcome: BuildOutcome) => void;
+    vi.mocked(api.build).mockImplementationOnce(async request => success(request, 'Previous message'))
+      .mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const composer = await capture(); fireEvent.click(screen.getByRole('button', { name: 'Build message' }));
+    await screen.findByTestId('message');
+    const edit = screen.getByRole('textbox', { name: 'Additional edit for this rebuild' });
+    fireEvent.change(edit, { target: { value: 'Make it warmer' } });
+    fireEvent.keyDown(edit, { key: 'Enter' });
+    await waitFor(() => expect(api.build).toHaveBeenCalledTimes(2));
+    fireEvent.change(edit, { target: { value: 'New pending edit' } });
+    fireEvent.keyDown(edit, { key: 'Escape' });
+    expect(composer).toBeVisible(); expect(composer).toHaveFocus();
+    expect(screen.getByTestId('message')).not.toBeVisible();
+    expect(api.hide).not.toHaveBeenCalled(); expect(api.hideAndRestoreFocus).not.toHaveBeenCalled();
+    expect(api.copy).not.toHaveBeenCalled(); expect(api.hideRestoreAndPaste).not.toHaveBeenCalled();
+    expect(api.cancel).not.toHaveBeenCalled(); expect(api.quit).not.toHaveBeenCalled();
+    await act(async () => finish(success(vi.mocked(api.build).mock.calls[1][0], 'Revised message')));
+    expect(composer).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'View message' }));
+    expect(edit).toHaveValue('New pending edit');
+    expect(screen.getByTestId('message')).toHaveTextContent('Revised message');
+  });
+
+  it('plain Enter saves thought edits and rebuilds style/message edits; composition, Shift and repeats do not act', async () => {
+    vi.mocked(api.build).mockImplementation(async request => success(request, `Message ${vi.mocked(api.build).mock.calls.length}`));
+    const composer = await capture();
+    fireEvent.keyDown(composer, { key: 'Enter', repeat: true });
+    expect(document.querySelectorAll('.entry')).toHaveLength(0);
+    fireEvent.keyDown(composer, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit thought 1' }));
+    const inline = screen.getByRole('textbox', { name: 'Edit thought 1' });
+    fireEvent.change(inline, { target: { value: 'Updated\nthought' } });
+    for (const flags of [{ shiftKey: true }, { isComposing: true }, { keyCode: 229 }, { repeat: true }]) {
+      fireEvent.keyDown(inline, { key: 'Enter', ...flags });
+      expect(inline).toBeVisible();
+    }
+    fireEvent.keyDown(inline, { key: 'Enter' });
+    expect(screen.queryByRole('textbox', { name: 'Edit thought 1' })).toBeNull();
+    fireEvent.keyDown(composer, { key: 'Enter', ctrlKey: true });
+    await screen.findByTestId('message');
+    const edit = screen.getByRole('textbox', { name: 'Additional edit for this rebuild' });
+    fireEvent.change(edit, { target: { value: 'First change\nwith detail' } });
+    for (const flags of [{ shiftKey: true }, { isComposing: true }, { keyCode: 229 }, { repeat: true }]) fireEvent.keyDown(edit, { key: 'Enter', ...flags });
+    expect(api.build).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(edit, { key: 'Enter' });
+    await waitFor(() => expect(edit).toHaveValue(''));
+    expect(vi.mocked(api.build).mock.calls[1][0].revision).toEqual({ previousText: 'Message 1', instruction: 'First change\nwith detail' });
+    fireEvent.change(edit, { target: { value: 'Second change' } });
+    fireEvent.keyDown(edit, { key: 'Enter' });
+    await waitFor(() => expect(edit).toHaveValue(''));
+    expect(vi.mocked(api.build).mock.calls[2][0].revision).toEqual({ previousText: 'Message 2', instruction: 'Second change' });
+    fireEvent.click(screen.getByText('Session style', { selector: 'strong' }));
+    const style = screen.getByRole('textbox', { name: 'Session style' });
+    fireEvent.change(style, { target: { value: 'Friendly\nand concise' } });
+    fireEvent.keyDown(style, { key: 'Enter', shiftKey: true });
+    expect(api.build).toHaveBeenCalledTimes(3);
+    fireEvent.keyDown(style, { key: 'Enter' });
+    await waitFor(() => expect(api.build).toHaveBeenCalledTimes(4));
+    expect(vi.mocked(api.build).mock.calls[3][0]).toMatchObject({ style: 'Friendly\nand concise', revision: null });
+    expect(api.copy).not.toHaveBeenCalled(); expect(api.hideAndRestoreFocus).not.toHaveBeenCalled();
+  });
+
+  it('saves independent thought/message font sizes without modifying the draft or its freshness', async () => {
+    vi.mocked(api.build).mockImplementation(async request => success(request));
+    await capture(); fireEvent.click(screen.getByRole('button', { name: 'Build message' }));
+    await screen.findByTestId('message');
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Thought font size (px)' }), { target: { value: '18' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Message font size (px)' }), { target: { value: '22' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(api.saveSettings).toHaveBeenCalledWith(expect.objectContaining({ thoughtFontSize: 18, messageFontSize: 22 }));
+    expect(document.querySelector('main')).toHaveStyle({ '--thought-font-size': '18px', '--message-font-size': '22px' });
+    expect(screen.getByText('Ready', { exact: true })).toBeVisible();
+    expect(screen.getByTestId('message')).toHaveTextContent('Final text');
+    expect(api.build).toHaveBeenCalledTimes(1);
   });
 
   it.each([{ platform: 'Mac', modifier: 'metaKey', label: '⇧⌘ Enter' }, { platform: 'Windows', modifier: 'ctrlKey', label: 'Ctrl+Shift+Enter' }])('shift shortcut copies then requests one guarded paste on $platform', async ({ platform, modifier, label }) => {

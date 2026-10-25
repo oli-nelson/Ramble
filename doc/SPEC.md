@@ -95,9 +95,10 @@ The core loop is: summon → capture thoughts → edit → build → review/refi
   a shortcut to Placement settings. Do not block capture/build on permission.
 - The window stays above ordinary application windows. Do not promise display
   over secure desktops, permission prompts, or every exclusive full-screen app.
-- Losing focus does not hide the window. Escape hides it when no editor/dialog
-  is consuming Escape and returns focus to the original app without copying or
-  pasting. The close button hides rather than quits.
+- Losing focus does not hide the window. In Message, Escape returns to Thoughts
+  without hiding, copying, pasting, cancelling a build or discarding pending edits.
+  In Thoughts, Escape hides and returns focus to the original app. Editor/dialog
+  cancellation takes precedence. The close button hides rather than quits.
 - Hide preserves the draft and any in-progress build until a new-draft action or
   shortcut summon replaces them. Expose an explicit Quit.
 - Failure to register a hotkey must be visible with a recovery path through the
@@ -109,10 +110,19 @@ The core loop is: summon → capture thoughts → edit → build → review/refi
   This resembles a single-user Slack room, not alternating user/agent messages.
 - Enter submits a nonblank entry; Shift+Enter inserts a newline. Respect IME
   composition so confirming composed text never accidentally submits it.
+- Apply this convention consistently to multiline text fields: Enter saves an inline
+  thought edit, rebuilds from session style or additional message edits, and saves
+  settings/command-template forms. Shift+Enter inserts a newline without acting.
+  Single-line form inputs submit on Enter but cannot insert newlines; Shift+Enter
+  does not submit them. In application search, Enter focuses the filtered application
+  picker rather than saving/closing Settings. Ignore key repeats and IME/keyCode-229 confirmation. Preserve
+  the separate Command/Ctrl+Enter and Message paste shortcuts below.
 - Clear the composer after successful entry submission and preserve its focus.
 - Preserve literal text, paragraph breaks, Unicode, and code-like content.
 - Edit an entry inline with explicit Save and Cancel. Keep its identity and
   chronological position. Escape cancels editing before it can hide the window.
+- Keep thought rows vertically compact: 10 px top/bottom padding with readable
+  1.5 line-height, without shrinking the edit/delete controls.
 - Allow deletion with a short-lived Undo action. No drag reordering in the MVP.
 - A Build action includes all saved entries, in displayed order.
 - If composer text is nonblank, Build first commits it as the last entry. If an
@@ -135,11 +145,28 @@ The core loop is: summon → capture thoughts → edit → build → review/refi
   inline edits, result, session style, pending rebuild instructions, and active runs.
   Return focus to the composer in Thoughts and the heading in Message. Do not
   switch views automatically on completion if the user has returned to Thoughts.
-  Default to a 640 × 480 window with a 560 × 420 minimum; preserve existing saved
+  Default to a 640 × 480 window with a regular-mode 560 × 420 minimum; preserve existing saved
   sizes and user resizing. Share status and Copy with the Message Back row,
   remove repeated pane headings, place Build beside the compact composer, and
   keep the additional-edit field and Rebuild inline to reclaim vertical space.
-- Provide a preset selector in the main window. Switching presets takes one
+- Provide a persistent, off-by-default **Compact Mode** switch in the top toolbar,
+  still accessible while compact. Schema 8 adds `compactMode: false` to schemas 1–7
+  without changing saved configuration. Saving/toggling must not discard drafts,
+  reset the view, cancel active work, change prompts or mark messages out of date.
+- Compact Mode retains capture/inline edits/delete/undo, Build/Cancel, Message back/
+  copy/revision edits, a toolbar View message action, Settings and existing keyboard
+  shortcuts. Hide branding, the toolbar preset/new-draft controls, entry numbering,
+  session style, footer and secondary help. Advanced options remain available by
+  leaving compact; presets remain accessible in Settings. Never hide errors, warning
+  banners, diagnostic consent/recovery actions or out-of-date/pending-edit status.
+- Optimize both axes with a 40 px toolbar, icon-only action buttons, denser rows and
+  tighter composer/rebuild controls. Keep saved font sizes unchanged. Compact native
+  minimum size is 360×280 logical points; dialogs scroll and remain usable there.
+  Enabling does not auto-shrink the window. While compact, keep the current chosen
+  size on summon (ignore placement width/height only, preserving saved rules and
+  anchor/clamping behavior). Leaving compact expands a smaller window to at least
+  560×420 and re-enables placement sizing on subsequent summons.
+- Provide a preset selector in the regular main window. Switching presets takes one
   selection, affects the next build only, and persists the last selection.
 - Keep preset creation and duplication out of the main toolbar. Settings → Presets
   owns creation, duplication, selection, renaming, deletion, template choice, and
@@ -148,6 +175,11 @@ The core loop is: summon → capture thoughts → edit → build → review/refi
 - Default OpenCode uses Model ID `openai/gpt-6-luna`, effort `medium`; default Codex
   uses Codex's bare `gpt-6-luna` identifier and effort `medium`. Preserve explicit
   saved customizations. Supported effort values depend on the CLI/model.
+- Settings → General provides independent saved thought and message font sizes,
+  whole numbers from 12–28 px (defaults 15 and 17). Thought size applies to entries,
+  composer and inline edits; message size applies to generated output. Changing
+  typography does not alter prompt data, copy text, draft state or result freshness.
+  Schema 7 adds these defaults while preserving existing schemas 1–6 settings.
 - Show running state, elapsed time, Cancel, and the active preset. Do not open
   a terminal window or expose raw protocol events as message text.
 - Only one build may run at once. Editing source/style remains possible while
@@ -189,8 +221,9 @@ The core loop is: summon → capture thoughts → edit → build → review/refi
   was still foreground before hiding (do not steal focus after an intervening app
   switch). Restoration is best effort under OS activation policy: never relaunch a
   closed app or request Accessibility. Synthetic input is restricted to the explicit
-  paste action above. Normal Copy and window-close behavior stay unchanged; Escape
-  now uses return-focus hide while preserving editor/dialog cancellation semantics.
+   paste action above. Normal Copy and window-close behavior stay unchanged; Escape
+   goes back from Message and only hides/returns focus from Thoughts, after local
+   editor/dialog cancellation.
 - Newly inserted thoughts and each successful generated message wipe in over a
   fixed 400 ms regardless of text length. Use a steady reveal across the text's own
   bounds (not empty row space), starting before the first paint. Bring newly inserted
@@ -221,7 +254,9 @@ The core loop is: summon → capture thoughts → edit → build → review/refi
   opening and make the final ask more direct.” Both fields can change together.
 - With an edit instruction, send the last successful message as revision input,
   alongside current source entries and session style, in a fresh one-shot run.
-  This preserves accumulated refinements without resuming a harness session.
+  Each successive edit uses the latest successful generated message, not the first
+  output; failed/cancelled runs do not replace that revision target. This preserves
+  accumulated refinements without resuming a harness session.
 - Without an edit instruction, rebuild regenerates from current source and style;
   label this behavior so the user knows earlier one-off edits may not carry over.
 - Apply the one-off instruction to this revision only; never merge it into the

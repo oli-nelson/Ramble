@@ -1,7 +1,8 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Monitor, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { api, demo } from '../../native/client';
 import type { Anchor, PlacementContext, PlacementRule, PlacementSettings as Preferences } from '../../domain/types';
+import { actionEnter } from '../../ui/actionEnter';
 
 const anchors: { id: Anchor; name: string; glyph: string }[] = [
   { id: 'topLeft', name: 'Top left', glyph: '↖' }, { id: 'top', name: 'Top center', glyph: '↑' }, { id: 'topRight', name: 'Top right', glyph: '↗' },
@@ -48,6 +49,7 @@ export function PlacementSettings({ value, onChange, readOnly }: { value: Prefer
   const [context, setContext] = useState<PlacementContext | null>(null);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState('');
+  const applicationPicker = useRef<HTMLSelectElement>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const refresh = async () => { setBusy(true); setError(''); try { setContext(await api.placementContext()); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } };
@@ -68,7 +70,7 @@ export function PlacementSettings({ value, onChange, readOnly }: { value: Prefer
     {context?.accessibilityRequired && <div className="notice permission-notice"><strong>{context.accessibilityGranted ? 'Accessibility access enabled' : 'Accessibility access needed on macOS'}</strong><p>Ramble reads only the focused app’s identity and window position/size—not window titles or contents. Access also enables the explicit copy-and-paste shortcut to send one Command-V after returning focus. Ordinary copy/close and Escape need no access. Without access, placement uses a display fallback. Permission is requested only when you click Enable access.</p><div className="permission-actions">{!context.accessibilityGranted && <button type="button" disabled={busy} onClick={async () => { setBusy(true); try { await api.requestPlacementAccess(); await refresh(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }}>Enable access</button>}<button type="button" disabled={busy} onClick={refresh}>Refresh access</button></div><p className="hint">Enable Ramble in System Settings → Privacy &amp; Security → Accessibility. A restart may be needed after granting access.</p></div>}
     <div className="placement-overrides-heading"><h3>Application overrides</h3><button type="button" className="small" disabled={busy} onClick={refresh}><RefreshCw size={13} />Refresh apps</button></div>
     <p className="hint">Choose an open application; no bundle IDs or executable paths to type. The rule stays saved when that app closes.</p>
-    <div className="application-picker"><label>Search applications<input type="search" placeholder="Safari, Slack, Visual Studio Code…" value={query} onChange={e => setQuery(e.target.value)} disabled={disabled} /></label><label>Application<select value={selected} disabled={disabled || busy} onChange={e => setSelected(e.target.value)}><option value="">Choose an open application…</option>{filtered.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label><button type="button" className="small" disabled={disabled || !selected} onClick={() => add(selected)}><Plus size={14} />Add override</button></div>
+    <div className="application-picker"><label>Search applications<input type="search" placeholder="Safari, Slack, Visual Studio Code…" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => actionEnter(e, () => applicationPicker.current?.focus())} disabled={disabled} /></label><label>Application<select ref={applicationPicker} value={selected} disabled={disabled || busy} onChange={e => setSelected(e.target.value)}><option value="">Choose an open application…</option>{filtered.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label><button type="button" className="small" disabled={disabled || !selected} onClick={() => add(selected)}><Plus size={14} />Add override</button></div>
     {context?.lastApplication && <button type="button" className="use-last-app" disabled={disabled} onClick={() => add(context.lastApplication!.id)}><Monitor size={14} />Use last focused app: {context.lastApplication.name}</button>}
     {value.overrides.length === 0 && <p className="hint empty-overrides">All applications currently use the default placement.</p>}
     {value.overrides.map((override, index) => <section key={override.applicationId} className="placement-override" aria-label={`Placement for ${override.applicationName}`}>

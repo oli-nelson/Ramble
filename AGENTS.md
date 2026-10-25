@@ -25,6 +25,8 @@
   -- -D warnings`. Format with `cargo fmt --manifest-path src-tauri/Cargo.toml`.
 - Native checks need built frontend assets (`npm run build`) and Tauri platform
   prerequisites. See `README.md` for setup and `doc/VALIDATION.md` for release gates.
+- Run Tauri packaging after native checks, not concurrently in the same target
+  directory: packaging can invalidate dependency artifacts while rustdoc runs.
 - CLI templates are trusted, editable executable/argv configuration. Isolation
   validation is intentionally deferred, not a gate. Keep defaults tied to CLI help
   and official docs, and never claim offline fixtures prove real CLI isolation.
@@ -45,6 +47,14 @@
 - Settings schema 6 adds optional width/height to default/per-app placement rules.
   Preserve saved bounds during migration; inherit app dimensions independently,
   then scale/size before anchoring/clamping. Disabled/already-focused summons keep size.
+- Settings schema 7 adds independent thought/message font sizes (12–28 px, 15/17
+  defaults). Preserve schemas 1–6 configuration; typography must not affect prompts,
+  freshness or clipboard text. Apply thought size to entries, composer and inline edits.
+- Settings schema 8 adds persisted Compact Mode, off by default. Keep it out of draft
+  snapshots/fingerprints; never hide errors or diagnostic recovery controls. Native
+  minimums are 560×420 regular / 360×280 compact. Apply them on the main thread after
+  dropping the settings lock. Compact placement ignores dimensions only on cloned
+  rules, preserving saved rules and current size; normalize bounds when leaving it.
 - Failed-run stdout/stderr is private: only explicit-consent IPC may return bounded
   excerpts. Test consumption/discard/next-build/quit lifecycle; never log output.
 - Keep shortcut `ramble:summon` (fresh draft) distinct from `ramble:focus` (resume).
@@ -54,10 +64,15 @@
   native-only/transient, capture before activation even with placement disabled,
   preserve the origin on own-app summons, and do not prompt for Accessibility,
   relaunch targets or steal focus after the user has switched apps.
-- Escape also uses return-focus hide. Only explicit Message Shift+Command/Ctrl+Enter
-  may call `hide_restore_and_paste`; test `paste.rs` gates with fake observations.
+- Escape returns from Message to Thoughts without native IPC; from Thoughts it uses
+  return-focus hide. Editor/dialog cancellation takes precedence. Only explicit
+  Message Shift+Command/Ctrl+Enter may call `hide_restore_and_paste`; test `paste.rs`
+  gates with fake observations.
   Wait for verified target focus/key release, cancel on epoch/focus/timeout changes,
   and never retry a potentially delivered chord or run real input injection in tests.
+- Use `ui/actionEnter.ts` for text-field Enter actions; Shift+Enter stays multiline,
+  and repeats/IME/keyCode-229 confirmation must not submit. Use requestSubmit for
+  forms to retain validation and busy/read-only gates; keep modified shortcuts distinct.
 - Diagnostics and invocation preview are end-user tools available in all builds.
   Keep preview state/toggle in memory only; never log commands, stdin or prompts.
 - Playwright uses its own demo server on port 1421 (`RAMBLE_E2E_PORT` override),

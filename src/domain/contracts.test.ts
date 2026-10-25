@@ -8,6 +8,7 @@ it('shares exact default settings with the native schema', () => {
   const settings: Settings = defaultSettings();
   expect(settings).toEqual(builtins);
   expect(settings.templates.map(t => t.id)).toEqual(['opencode', 'codex', 'claude']);
+  expect(settings).toMatchObject({ schemaVersion: 8, thoughtFontSize: 15, messageFontSize: 17, compactMode: false });
   settings.presets[0].parameters.model = 'custom';
   expect(defaultSettings().presets[0].parameters.model).toBe('openai/gpt-6-luna');
 });

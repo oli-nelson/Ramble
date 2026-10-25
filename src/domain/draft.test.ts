@@ -47,6 +47,8 @@ describe('draft transactions', () => {
     s.send({ type: 'composer', text: 'Pending' }); expect(isStale(s.state, s.settings)).toBe(true);
     s.send({ type: 'composer', text: ' \n ' }); expect(isStale(s.state, s.settings)).toBe(false);
     s.settings.presets[0].name = 'Renamed'; s.settings.revision++; expect(isStale(s.state, s.settings)).toBe(false);
+    s.settings.thoughtFontSize = 28; s.settings.messageFontSize = 12; expect(isStale(s.state, s.settings)).toBe(false);
+    s.settings.compactMode = true; expect(isStale(s.state, s.settings)).toBe(false);
     s.settings.presets[0].parameters.model = 'different'; expect(isStale(s.state, s.settings)).toBe(true);
   });
   for (const kind of ['failed', 'cancelled', 'timedOut'] as const) {
@@ -70,6 +72,21 @@ describe('draft transactions', () => {
   it('preserves newer instruction typing, even if its text returns to the submitted value', () => {
     const s = setup(); s.thought('Original'); s.start(); s.succeed(); s.send({ type: 'pendingEdit', text: 'Shorten' }); s.start();
     s.send({ type: 'pendingEdit', text: '' }); s.send({ type: 'pendingEdit', text: 'Shorten' }); s.succeed(); expect(s.state.pendingEdit.text).toBe('Shorten');
+  });
+  it('each successive edit includes the latest successful message, even after a failed revision', () => {
+    const s = setup(); s.thought('Original'); s.start(); s.succeed('First message');
+    s.send({ type: 'pendingEdit', text: 'Make warmer' });
+    expect(s.start().request.revision?.previousText).toBe('First message');
+    s.succeed('Warmer message');
+    s.send({ type: 'pendingEdit', text: 'Shorten' });
+    const failed = s.start();
+    expect(failed.request.revision?.previousText).toBe('Warmer message');
+    s.send({ type: 'outcome', outcome: { runId: failed.request.runId, draftId: s.state.id, kind: 'failed', durationMs: 1 } });
+    const retry = s.start();
+    expect(retry.request.revision).toEqual({ previousText: 'Warmer message', instruction: 'Shorten' });
+    s.succeed('Short warm message');
+    s.send({ type: 'pendingEdit', text: 'Add a closing question' });
+    expect(s.start().request.revision?.previousText).toBe('Short warm message');
   });
   it('session style does not mutate defaults; new drafts snapshot the saved default', () => {
     const s = setup(); s.send({ type: 'style', text: '' }); expect(s.settings.defaultStyle).not.toBe('');

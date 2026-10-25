@@ -313,3 +313,49 @@ keep product requirements in `doc/SPEC.md` and technical design in `doc/TECH_SPE
 - Next: review/commit/push, ensure repository rules permit the publish job's
   changelog/tag push, then opt in to a first hosted release run. Signing/notarization,
   hosted cross-platform execution and manual installation remain unvalidated.
+
+## 2026-10-25 — Keyboard editing, compact thoughts and text-size preferences
+- Changed: Escape in Message returns to Thoughts without hiding/cancelling work;
+  Thoughts retains return-focus hide and local editor/dialog cancellation wins.
+  Shared `ui/actionEnter.ts` makes plain Enter submit/save/rebuild, Shift+Enter
+  multiline, and ignores repeat/IME/keyCode-229 confirmation. Forms retain HTML
+  validation and busy/read-only gates; app search focuses its picker instead of saving.
+- Changed: reduced thought-row padding to 10 px and added independent saved 12–28 px
+  thought/message sizes in General (15/17 defaults). Schema 7 preserves older saved
+  configuration. Composer/inline text shares thought size; large text grows composer
+  height. Typography never changes prompts, clipboard content or result freshness.
+- Verified: revision requests already include the latest successful message in
+  `revision.previousText`. Added successive-edit/failure-retry/native-JSON regression
+  coverage rather than altering the working prompt contract or resuming sessions.
+- Validated: frontend production build, 72 frontend tests, 60 all-feature and 57
+  offline-only native tests, strict Clippy, rustfmt and diff checks; 18 Chromium
+  workflows including actual Shift-newlines, Enter actions and rendered sizes.
+  Reviewed completed compact/large-text screenshots at 560×420. Final browser rerun
+  passed and unsigned `src-tauri/target/debug/bundle/macos/Ramble.app` was rebuilt.
+  No real models, OS paste or native UI validation.
+- Next: save/copy unsaved notes before restarting the native host for schema 7;
+  manually check keyboard flow and sizes on macOS. Windows remains unvalidated.
+  No commits or pushes.
+
+## 2026-10-25 — Persistent Compact Mode
+- Changed: added a saved, off-by-default Compact Mode toolbar switch (schema 8),
+  scoped minimal layout in `src/app/compact.css`, and a 360×280 native minimum.
+  Keeps capture/edit/build/cancel/revise/copy/settings and recovery; hides secondary
+  controls/hints, puts View message and active Cancel in toolbars, preserves font sizes.
+- Changed: native settings saves/minimum updates run on the main thread and capture
+  current bounds. Entry does not auto-shrink; exit grows undersized windows to the
+  normal 560×420 minimum. Compact summons retain size by stripping dimensions only
+  from cloned placement rules. Saved rules, draft state and active work stay intact.
+- Changed: bind global keys in a layout effect so immediate post-build shortcuts
+  see the committed result/view. Never stage/replace the user's existing index.
+- Validated: 75 frontend tests, 62 all-feature and 59 offline-only native tests,
+  strict Clippy, rustfmt, diff checks, and 21 Chromium workflows. Reviewed light/dark
+  360×280 screenshots, large fonts, recovery controls and simulated macOS gutter.
+  A concurrent package build invalidated rustdoc artifacts; a sequential native
+  rerun passed. Keep packaging sequential after Cargo checks in the shared target.
+- Packaging: rebuilt unsigned `src-tauri/target/debug/bundle/macos/Ramble.app` and
+  final 21-workflow browser rerun passed. No real model calls, OS input, native
+  resizing interaction, or Windows validation. No commits or pushes.
+- Next: copy unsaved notes before restarting the native host; toggle the toolbar
+  switch, resize compact to 360×280, reopen/summon, then exit compact and verify the
+  normal minimum. Check placement/monitor clamping natively and Windows separately.

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState, type CSSProperties } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { ArrowLeft, ArrowUp, Check, ChevronRight, Copy, FilePlus2, LoaderCircle, MessageSquareText, Pencil, RefreshCw, Settings2, Sparkles, Square, Trash2, Undo2, X } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Check, ChevronRight, Copy, FilePlus2, LoaderCircle, MessageSquareText, Minimize2, Pencil, RefreshCw, Settings2, Sparkles, Square, Trash2, Undo2, X } from 'lucide-react';
 import darkMark from '../../doc/brand/svg/ramble-mark-dark.svg';
 import lightMark from '../../doc/brand/svg/ramble-mark-light.svg';
 import { canBuild, hasContent, isStale, makeEntry, newDraft, prepareBuild, reducer } from '../domain/draft';
@@ -9,6 +9,7 @@ import type { BuildPreview, CommandTemplate, HarnessOutput, Settings, SettingsEn
 import { api, demo } from '../native/client';
 import { Modal } from '../ui/Modal';
 import { WipeIn } from '../ui/WipeIn';
+import { actionEnter } from '../ui/actionEnter';
 import { TemplateEditor } from '../features/presets/TemplateEditor';
 import { SettingsDialog } from '../features/settings/SettingsDialog';
 
@@ -24,6 +25,7 @@ export function App() {
 function Workspace({ initial }: { initial: SettingsEnvelope }) {
   const [envelope, setEnvelope] = useState(initial);
   const settings = envelope.settings;
+  const compact = settings.compactMode;
   const [state, dispatch] = useReducer(reducer, settings, newDraft);
   const [modal, setModal] = useState<'settings' | 'template' | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<CommandTemplate | undefined>();
@@ -213,16 +215,20 @@ function Workspace({ initial }: { initial: SettingsEnvelope }) {
      catch { if (draftId.current === copiedDraft) notify('Couldn’t copy the message. Please try Copy again.', true); return; }
      if (action !== 'copy') {
        try { if (action === 'paste') await api.hideRestoreAndPaste(); else await api.hideAndRestoreFocus(); }
-       catch (e) { if (draftId.current === copiedDraft) notify(action === 'paste' ? `Message copied. Paste action failed: ${(e as Error).message}` : 'Message copied, but Ramble couldn’t hide. Press Escape to retry.', true); }
+       catch (e) { if (draftId.current === copiedDraft) notify(action === 'paste' ? `Message copied. Paste action failed: ${(e as Error).message}` : 'Message copied, but Ramble couldn’t hide. Return to Thoughts and press Escape to hide.', true); }
      }
      } finally { copyInFlight.current = false; }
   }
-  useEffect(() => {
+  // A key pressed immediately after a result/view commit must see that commit,
+  // not the previous result captured by a not-yet-refreshed passive listener.
+  useLayoutEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.isComposing || document.querySelector('dialog[open]')) return;
+      if (e.defaultPrevented || e.isComposing || e.keyCode === 229 || document.querySelector('dialog[open]')) return;
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (state.inlineEdit) dispatch({ type: 'cancelEdit' }); else api.hideAndRestoreFocus().catch(e => notify(e.message, true));
+        if (view === 'message') setView('thoughts');
+        else if (state.inlineEdit) dispatch({ type: 'cancelEdit' });
+        else api.hideAndRestoreFocus().catch(e => notify(e.message, true));
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         if (e.altKey || (e.shiftKey && view !== 'message')) return;
         e.preventDefault();
@@ -238,11 +244,17 @@ function Workspace({ initial }: { initial: SettingsEnvelope }) {
     dispatch({ type: 'submit', entry: makeEntry(state.composer) });
     composer.current?.focus();
   }
+  async function cancelBuild() {
+    if (state.run.kind === 'running') {
+      try { await api.cancel(state.run.snapshot.request.runId); }
+      catch (e) { notify((e as Error).message, true); }
+    }
+  }
   const buildShortcut = navigator.userAgent.includes('Mac') ? '⌘ Enter' : 'Ctrl+Enter';
   const pasteShortcut = navigator.userAgent.includes('Mac') ? '⇧⌘ Enter' : 'Ctrl+Shift+Enter';
   const buildButton = <button className="primary build-button" disabled={resetting || !canBuild(state)} onClick={build} title={view === 'thoughts' ? `Build · ${buildShortcut}` : 'Rebuild from thoughts and style'}><RefreshCw size={18} />{resetting ? 'Finishing cleanup…' : state.result ? 'Rebuild' : 'Build message'}</button>;
 
-  return <main className="app" data-native-mac={isTauri() && navigator.userAgent.includes('Mac')}>
+  return <main className="app" data-compact={compact} data-native-mac={isTauri() && navigator.userAgent.includes('Mac')} style={{ '--thought-font-size': `${settings.thoughtFontSize}px`, '--message-font-size': `${settings.messageFontSize}px` } as CSSProperties}>
     <header className="toolbar" data-tauri-drag-region>
       <div className="brand" data-tauri-drag-region><picture data-tauri-drag-region><source srcSet={lightMark} media={settings.theme === 'light' ? 'all' : settings.theme === 'system' ? '(prefers-color-scheme: light)' : 'not all'} /><img src={darkMark} alt="" draggable={false} data-tauri-drag-region /></picture><h1 data-tauri-drag-region>Ramble</h1></div>
       <div className="preset-controls"><select aria-label="Active preset" value={state.selectedPresetId} disabled={saving} onChange={async e => {
@@ -254,6 +266,13 @@ function Workspace({ initial }: { initial: SettingsEnvelope }) {
         if (dirty) setConfirmation({ title: 'Start a new draft?', text: 'This discards your current thoughts, session style, and message. There is no draft history.', action: startNewDraft }); else startNewDraft();
       }}><FilePlus2 size={19} /></button>
       <div className="toolbar-spacer" data-tauri-drag-region />
+      {compact && view === 'thoughts' && state.revealed && !running && <button className="icon-button" aria-label="View message" title="View message" onClick={() => setView('message')}><MessageSquareText size={18} /></button>}
+      <button className="compact-toggle" role="switch" aria-label="Compact Mode" aria-checked={compact} title={compact ? 'Turn off Compact Mode' : 'Turn on Compact Mode'} disabled={saving || envelope.readOnly} onClick={async () => {
+        setSaving(true);
+        try { await saveSettings({ ...settings, compactMode: !compact }); }
+        catch (e) { notify((e as Error).message, true); }
+        finally { setSaving(false); }
+      }}><Minimize2 size={16} /><span>Compact</span><span className="compact-toggle-track" aria-hidden="true"><i /></span></button>
       <button className="icon-button settings-button" title="Settings" aria-label="Settings" onClick={() => setModal('settings')}><Settings2 size={21} /></button>
     </header>
 
@@ -263,7 +282,7 @@ function Workspace({ initial }: { initial: SettingsEnvelope }) {
 
     {view === 'message' && <div className="message-toolbar">
       <button className="back-button" aria-controls="thoughts-pane" onClick={() => setView('thoughts')}><ArrowLeft size={16} />Back to thoughts</button>
-      <div className="message-toolbar-actions"><span className={`status ${stale || pending ? 'outdated' : ''}`} role="status">{running ? <><LoaderCircle className="spin" size={13} />Building · {elapsed.toFixed(1)}s</> : state.result ? <><i />{stale ? 'Out of date' : pending ? 'Awaiting edit' : 'Ready'}</> : 'Not built yet'}</span><button className="primary copy-button" disabled={!state.result} onClick={() => void copy()} title={`Copy message · ${buildShortcut} to copy & hide`} aria-label={stale ? 'Copy last message (out of date)' : 'Copy message'}>{copied ? <Check size={17} /> : <Copy size={17} />}{copied ? 'Copied' : 'Copy'}</button></div>
+      <div className="message-toolbar-actions"><span className={`status ${stale || pending ? 'outdated' : ''} ${running ? 'building' : ''}`} role="status">{running ? <><LoaderCircle className="spin" size={13} />Building{!compact && <> · {elapsed.toFixed(1)}s</>}</> : state.result ? <><i />{stale ? 'Out of date' : pending ? 'Awaiting edit' : 'Ready'}</> : 'Not built yet'}</span>{compact && running && <button className="icon-button compact-cancel" aria-label="Cancel" title="Cancel build" onClick={cancelBuild}><Square size={15} /></button>}<button className="primary copy-button" disabled={!state.result} onClick={() => void copy()} title={`Copy message · ${buildShortcut} to copy & hide`} aria-label={stale ? 'Copy last message (out of date)' : 'Copy message'}>{copied ? <Check size={17} /> : <Copy size={17} />}{copied ? 'Copied' : 'Copy'}</button></div>
     </div>}
     <div className="workspace">
       <section id="thoughts-pane" className="capture-pane" aria-label="Source thoughts" hidden={view !== 'thoughts'}>
@@ -272,14 +291,12 @@ function Workspace({ initial }: { initial: SettingsEnvelope }) {
           {!state.entries.length && <div className="empty-state"><div className="empty-mark"><MessageSquareText size={30} /></div><h2>Start anywhere.</h2><p>A half-formed idea. A few details.<br />That thing you’re trying to say.</p><span>Drop your thoughts below. We’ll find the words.</span></div>}
           {state.entries.map((entry, index) => <WipeIn as="article" className={`entry ${state.inlineEdit?.entryId === entry.id ? 'editing' : ''}`} key={entry.id}>
             <span className="entry-number">{index + 1}</span>
-            {state.inlineEdit?.entryId === entry.id ? <div className="inline-edit"><textarea aria-label={`Edit thought ${index + 1}`} autoFocus value={state.inlineEdit.text} onChange={e => dispatch({ type: 'editText', text: e.target.value })} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); dispatch({ type: 'cancelEdit' }); } }} /><div><button onClick={() => dispatch({ type: 'cancelEdit' })}>Cancel</button><button className="primary small" disabled={!state.inlineEdit.text.trim()} onClick={() => dispatch({ type: 'saveEdit', now: Date.now() })}>Save</button></div></div>
+            {state.inlineEdit?.entryId === entry.id ? <div className="inline-edit"><textarea aria-label={`Edit thought ${index + 1}`} autoFocus value={state.inlineEdit.text} onChange={e => dispatch({ type: 'editText', text: e.target.value })} onKeyDown={e => { if (e.key === 'Escape' && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) { e.stopPropagation(); dispatch({ type: 'cancelEdit' }); } else actionEnter(e, () => dispatch({ type: 'saveEdit', now: Date.now() })); }} /><div><button onClick={() => dispatch({ type: 'cancelEdit' })}>Cancel</button><button className="primary small" disabled={!state.inlineEdit.text.trim()} onClick={() => dispatch({ type: 'saveEdit', now: Date.now() })}>Save</button></div></div>
               : <><p><span className="wipe-in-content" data-wipe-content>{entry.text}</span></p><div className="entry-actions"><button className="icon-button" disabled={!!state.inlineEdit} aria-label={`Edit thought ${index + 1}`} onClick={() => dispatch({ type: 'edit', entryId: entry.id })}><Pencil size={16} /></button><button className="icon-button danger" disabled={!!state.inlineEdit} aria-label={`Delete thought ${index + 1}`} onClick={() => dispatch({ type: 'delete', entryId: entry.id, now: Date.now() })}><Trash2 size={16} /></button></div></>}
           </WipeIn>)}
         </div>
         {state.deleted && <div className="undo-bar" role="status"><span>Thought removed</span><button onClick={() => dispatch({ type: 'undo', now: Date.now() })}><Undo2 size={14} />Undo</button></div>}
-        <div className="capture-controls"><div className="composer-build-row"><div className="composer"><textarea ref={composer} aria-label="Add a thought" placeholder="Add a thought…" value={state.composer} onChange={e => dispatch({ type: 'composer', text: e.target.value })} onKeyDown={e => {
-          if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) { e.preventDefault(); submit(); }
-          }} /><button className="primary send-button" disabled={!state.composer.trim()} aria-label="Submit thought" title="Submit thought · Enter" onClick={submit}><ArrowUp size={21} /></button></div>{running ? <button className="build-button" onClick={() => setView('message')}><LoaderCircle size={16} className="spin" />View build</button> : buildButton}</div>
+        <div className="capture-controls"><div className="composer-build-row"><div className="composer"><textarea ref={composer} aria-label="Add a thought" placeholder="Add a thought…" value={state.composer} onChange={e => dispatch({ type: 'composer', text: e.target.value })} onKeyDown={e => actionEnter(e, submit)} /><button className="primary send-button" disabled={!state.composer.trim()} aria-label="Submit thought" title="Submit thought · Enter" onClick={submit}><ArrowUp size={21} /></button></div>{running ? <button className="build-button" onClick={() => setView('message')}><LoaderCircle size={16} className="spin" />View build</button> : buildButton}</div>
           <div className="composer-footer"><span>Shift+Enter for a new line <span className="dot">·</span> Enter to add</span>{state.revealed && !running && <button className="view-message-link" aria-controls="message-pane" onClick={() => setView('message')}>View message<ChevronRight size={13} /></button>}</div>
         </div>
       </section>
@@ -288,17 +305,17 @@ function Workspace({ initial }: { initial: SettingsEnvelope }) {
         <h2 className="sr-only" ref={reviewHeading} tabIndex={-1}>Message</h2>
         <div className="review-scroll" ref={reviewScroll}>
           {state.result ? <WipeIn key={state.result.snapshot.request.runId} className="message-text" data-testid="message"><span className="wipe-in-content" data-wipe-content>{state.result.text}</span></WipeIn> : <div className="empty-state preview-empty"><Sparkles size={26} /><h2>A clear message, coming up.</h2><p>Your original thoughts are safe in Thoughts.<br />Refine the style, rebuild, and make it yours.</p></div>}
-          {running && <div className="run-notice"><LoaderCircle size={16} className="spin" /><span>Using {state.run.kind === 'running' && state.run.snapshot.presetName}. You can keep editing.</span><button onClick={async () => { if (state.run.kind === 'running') try { await api.cancel(state.run.snapshot.request.runId); } catch (e) { notify((e as Error).message, true); } }}><Square size={12} />Cancel</button></div>}
+           {running && !compact && <div className="run-notice"><LoaderCircle size={16} className="spin" /><span>Using {state.run.kind === 'running' && state.run.snapshot.presetName}. You can keep editing.</span><button onClick={cancelBuild}><Square size={12} />Cancel</button></div>}
           {state.run.kind !== 'idle' && state.run.kind !== 'running' && <div className={`run-error ${state.run.kind === 'cancelled' ? 'neutral' : ''}`} role="alert"><strong>{state.run.kind === 'cancelled' ? 'Build cancelled' : state.run.kind === 'timedOut' ? 'Build timed out' : 'Couldn’t build your message'}</strong><p>{state.run.message}</p><button onClick={() => setModal('settings')}>Check settings</button>{state.run.diagnosticsAvailable && state.run.runId && dismissedOutput !== state.run.runId && <div className="output-consent"><p>Would you like to view the harness output for diagnostics? It may contain private notes or secrets. Nothing is logged or saved.</p><button onClick={() => { if (state.run.kind !== 'idle' && state.run.kind !== 'running' && state.run.runId) void viewOutput(state.run.runId); }}>View harness output</button><button onClick={() => { if (state.run.kind !== 'idle' && state.run.kind !== 'running' && state.run.runId) discardOutput(state.run.runId); }}>Not now</button></div>}</div>}
           {stale && <p className="freshness-hint">Thoughts, style, or model changed. Copy still uses the last successful message.</p>}
-          <details className="session-style"><summary><ChevronRight size={16} /><strong>Session style</strong><span className="pill">Draft only</span></summary><label className="sr-only" htmlFor="session-style">Session style</label><textarea id="session-style" rows={5} value={state.style} onChange={e => dispatch({ type: 'style', text: e.target.value })} placeholder="Leave blank for baseline cleanup only." /><div className="style-actions"><button disabled={saving || envelope.readOnly} onClick={async () => {
+          <details className="session-style"><summary><ChevronRight size={16} /><strong>Session style</strong><span className="pill">Draft only</span></summary><label className="sr-only" htmlFor="session-style">Session style</label><textarea id="session-style" rows={5} value={state.style} onChange={e => dispatch({ type: 'style', text: e.target.value })} onKeyDown={e => actionEnter(e, () => void build())} placeholder="Leave blank for baseline cleanup only." /><div className="style-actions"><button disabled={saving || envelope.readOnly} onClick={async () => {
             setSaving(true); try { await saveSettings({ ...settings, defaultStyle: state.style }); notify('Session style saved as the default for future drafts.'); } catch (e) { notify((e as Error).message, true); } finally { setSaving(false); }
           }}>Save as default</button><button onClick={() => {
             const action = () => dispatch({ type: 'style', text: settings.defaultStyle });
             if (state.style !== settings.defaultStyle) setConfirmation({ title: 'Reset session style?', text: 'This replaces your draft’s style with the saved default. Your message won’t be rebuilt automatically.', action });
           }}>Reset to saved default</button></div></details>
         </div>
-        <div className="rebuild-controls"><div className="rebuild-row"><label className="sr-only" htmlFor="additional-edit">Additional edit for this rebuild</label><textarea id="additional-edit" rows={2} value={state.pendingEdit.text} disabled={!state.result} placeholder="Additional edit for this rebuild…" onChange={e => dispatch({ type: 'pendingEdit', text: e.target.value })} />{running ? <button disabled className="primary build-button"><LoaderCircle className="spin" size={18} />Building</button> : buildButton}</div><p className="hint">{state.inlineEdit ? 'Save or cancel the open thought before building.' : pending ? 'Revise the last message against current thoughts + style.' : 'Blank = regenerate from thoughts + style; one-off edits may not carry over.'}</p></div>
+        <div className="rebuild-controls"><div className="rebuild-row"><label className="sr-only" htmlFor="additional-edit">Additional edit for this rebuild</label><textarea id="additional-edit" rows={2} value={state.pendingEdit.text} disabled={!state.result} placeholder="Additional edit for this rebuild…" onChange={e => dispatch({ type: 'pendingEdit', text: e.target.value })} onKeyDown={e => actionEnter(e, () => void build())} />{running ? <button disabled className="primary build-button"><LoaderCircle className="spin" size={18} />Building</button> : buildButton}</div><p className="hint">{state.inlineEdit ? 'Save or cancel the open thought before building.' : pending ? 'Enter applies edits to the latest message; Shift+Enter adds a line.' : 'Enter rebuilds · Shift+Enter adds a line · Blank edits regenerate from thoughts + style.'}</p></div>
       </section>
     </div>
     <footer className="app-footer"><span><i />Private draft · Not saved on quit</span><span className="shortcut-hints"><span>{view === 'message' ? `${buildShortcut} to copy & hide` : `${buildShortcut} to build`}</span>{view === 'message' && <span>{pasteShortcut} to paste</span>}</span></footer>

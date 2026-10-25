@@ -1,0 +1,58 @@
+/* Opt-in layout only: never shrink the user's saved text sizes or hide failures. */
+.compact-toggle { gap: 5px; padding: 6px 8px; font-size: 11px; background: transparent; }
+.compact-toggle-track { width: 24px; height: 14px; padding: 2px; border-radius: 8px; background: var(--strong-border); display: inline-flex; align-items: center; }
+.compact-toggle-track i { width: 10px; height: 10px; border-radius: 50%; background: var(--secondary); transition: transform .12s; }
+.compact-toggle[aria-checked=true] .compact-toggle-track { background: var(--accent); }
+.compact-toggle[aria-checked=true] .compact-toggle-track i { background: var(--on-accent); transform: translateX(10px); }
+.app[data-compact=true] { min-width: 360px; }
+.app[data-compact=true] .toolbar { height: 40px; padding-right: 8px; padding-left: 8px; gap: 5px; }
+.app[data-compact=true][data-native-mac=true] .toolbar { padding-left: 88px; }
+.app[data-compact=true] .brand,
+.app[data-compact=true] .preset-controls,
+.app[data-compact=true] .toolbar-button,
+.app[data-compact=true] .app-footer,
+.app[data-compact=true] .composer-footer,
+.app[data-compact=true] .entry-number,
+.app[data-compact=true] .session-style,
+.app[data-compact=true] .rebuild-controls > .hint,
+.app[data-compact=true] .freshness-hint,
+.app[data-compact=true] .empty-state p,
+.app[data-compact=true] .empty-state > span,
+.app[data-compact=true] .empty-mark,
+.app[data-compact=true] .demo-banner span { display: none; }
+.app[data-compact=true] .settings-button { padding: 5px 7px; }
+.app[data-compact=true] .demo-banner { padding: 2px 8px; font-size: 9px; }
+.app[data-compact=true] .warning-banner { padding: 5px 8px; flex-wrap: wrap; gap: 5px; }
+.app[data-compact=true] .entries { padding: 0 8px; }
+.app[data-compact=true] .entry { padding: 6px 0; gap: 6px; }
+.app[data-compact=true] .entry-actions { gap: 0; margin-top: 0; }
+.app[data-compact=true] .entry-actions button { padding: 4px; }
+.app[data-compact=true] .inline-edit { min-width: 0; }
+.app[data-compact=true] .capture-controls,
+.app[data-compact=true] .rebuild-controls { padding: 6px 8px; }
+.app[data-compact=true] .composer-build-row,
+.app[data-compact=true] .rebuild-row { gap: 6px; }
+.app[data-compact=true] .composer textarea { height: max(40px, calc(var(--thought-font-size, 15px) * 1.6 + 14px)); min-height: max(40px, calc(var(--thought-font-size, 15px) * 1.6 + 14px)); padding: 6px 40px 6px 8px; }
+.app[data-compact=true] .send-button { width: 28px; height: 28px; right: 6px; top: 6px; }
+.app[data-compact=true] .build-button { min-width: 40px; height: 40px; padding: 0; font-size: 0; gap: 0; }
+.app[data-compact=true] .rebuild-row textarea { height: 40px; min-height: 40px; padding: 8px; }
+.app[data-compact=true] .message-toolbar { min-height: 38px; padding: 3px 8px; gap: 6px; }
+.app[data-compact=true] .back-button,
+.app[data-compact=true] .compact-cancel,
+.app[data-compact=true] .message-toolbar .copy-button { min-width: 30px; height: 30px; padding: 5px; font-size: 0; gap: 0; }
+.app[data-compact=true] .message-toolbar .status:not(.outdated):not(.building) { display: none; }
+.app[data-compact=true] .message-toolbar-actions { gap: 6px; }
+.app[data-compact=true] .review-scroll { padding: 0 10px; }
+.app[data-compact=true] .message-text { padding: 10px 0; line-height: 1.55; }
+.app[data-compact=true] .empty-state { min-height: 70px; padding: 12px 4px; }
+.app[data-compact=true] .empty-state h2 { font-size: 16px; margin-bottom: 0; }
+.app[data-compact=true] .undo-bar { padding: 3px 8px; }
+.app[data-compact=true] .modal { max-width: calc(100% - 16px); max-height: calc(100% - 16px); padding: 12px; }
+.app[data-compact=true] .modal-actions { flex-wrap: wrap; }
+.app[data-compact=true] .toast { bottom: 8px; max-width: calc(100% - 16px); }
+@media (max-width: 440px) {
+  .app[data-compact=true] .form-row { flex-direction: column; gap: 0; }
+}
+@media (max-width: 680px) {
+  .compact-toggle > span:first-of-type { display: none; }
+}

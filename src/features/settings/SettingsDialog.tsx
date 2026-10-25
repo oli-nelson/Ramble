@@ -5,6 +5,7 @@ import { api, demo } from '../../native/client';
 import type { CommandTemplate, Settings } from '../../domain/types';
 import { PlacementSettings } from './PlacementSettings';
 import { PresetSettings } from './PresetSettings';
+import { actionEnter } from '../../ui/actionEnter';
 
 export function SettingsDialog({ settings, readOnly, onSave, onClose, onQuit, onEditTemplate, initialSection = 'general', debugPreview = false, onDebugPreview }: {
   settings: Settings; readOnly: boolean; onSave: (settings: Settings) => Promise<void>; onClose: () => void; onQuit: () => void; onEditTemplate: (template?: CommandTemplate) => void; initialSection?: 'general' | 'placement';
@@ -20,8 +21,8 @@ export function SettingsDialog({ settings, readOnly, onSave, onClose, onQuit, on
   const edit = async (template?: CommandTemplate) => { setBusy(true); try { await onSave(local); onEditTemplate(template); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } };
   return <Modal title="Settings" onClose={onClose} wide>
     <nav className="tabs" aria-label="Settings sections">{sections.map(t => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t[0].toUpperCase() + t.slice(1)}</button>)}</nav>
-    <form onSubmit={async e => {
-      e.preventDefault(); setBusy(true); setError('');
+    <form onKeyDown={e => { if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) actionEnter(e, () => { if (!busy && !readOnly) e.currentTarget.requestSubmit(); }); }} onSubmit={async e => {
+      e.preventDefault(); if (busy || readOnly) return; setBusy(true); setError('');
       try { await onSave(local); onClose(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
     }}>
       <div className="settings-body">
@@ -29,10 +30,11 @@ export function SettingsDialog({ settings, readOnly, onSave, onClose, onQuit, on
           <label>Global shortcut<input value={local.hotkey} onChange={e => setLocal({ ...local, hotkey: e.target.value })} required /><span className="hint">Default: Control+Shift+Y on both platforms (the actual Control key on macOS, not Command). The old shortcut stays active if a new one fails.</span></label>
           <div className="form-row"><label>Appearance<select value={local.theme} onChange={e => setLocal({ ...local, theme: e.target.value as Settings['theme'] })}><option value="system">Follow system</option><option value="dark">Dark graphite</option><option value="light">Light ivory</option></select></label>
             <label>Build timeout (seconds)<input type="number" min={5} max={600} value={local.timeoutSeconds} onChange={e => setLocal({ ...local, timeoutSeconds: Number(e.target.value) })} /></label></div>
-          <label>Saved default style<textarea rows={5} value={local.defaultStyle} onChange={e => setLocal({ ...local, defaultStyle: e.target.value })} /><span className="hint">For future drafts. The current session style won’t change.</span></label>
-          <p className="hint">Closing or pressing Escape hides Ramble. Quit ends the session and discards your draft.</p>
+          <div className="form-row"><label>Thought font size (px)<input type="number" min={12} max={28} step={1} required value={local.thoughtFontSize} onChange={e => setLocal({ ...local, thoughtFontSize: Number(e.target.value) })} /></label><label>Message font size (px)<input type="number" min={12} max={28} step={1} required value={local.messageFontSize} onChange={e => setLocal({ ...local, messageFontSize: Number(e.target.value) })} /></label></div>
+          <label>Saved default style<textarea rows={5} value={local.defaultStyle} onChange={e => setLocal({ ...local, defaultStyle: e.target.value })} /><span className="hint">For future drafts. Enter saves settings; Shift+Enter adds a line. The current session style won’t change.</span></label>
+          <p className="hint">Escape returns from Message to Thoughts; in Thoughts it hides Ramble. Quit discards your draft.</p>
         </>}
-        {tab === 'placement' && <PlacementSettings value={local.placement} onChange={placement => setLocal({ ...local, placement })} readOnly={readOnly} />}
+        {tab === 'placement' && <>{local.compactMode && <p className="notice">Compact Mode keeps the current window size on summon. Saved placement widths/heights apply again when Compact Mode is off.</p>}<PlacementSettings value={local.placement} onChange={placement => setLocal({ ...local, placement })} readOnly={readOnly} /></>}
         {tab === 'presets' && <PresetSettings value={local} onChange={setLocal} readOnly={readOnly || busy} />}
         {tab === 'templates' && <>
           <p className="description">One editable command string per template. Changes apply to all its presets on their next build.</p>

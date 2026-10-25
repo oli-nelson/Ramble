@@ -15,7 +15,7 @@ export interface Preset {
   parameters: { model?: string; reasoningEffort?: string; executable?: string };
 }
 export interface Settings {
-  schemaVersion: 6;
+  schemaVersion: 8;
   revision: number;
   defaultStyle: string;
   templates: CommandTemplate[];
@@ -24,6 +24,9 @@ export interface Settings {
   hotkey: string;
   timeoutSeconds: number;
   theme: 'system' | 'dark' | 'light';
+  thoughtFontSize: number;
+  messageFontSize: number;
+  compactMode: boolean;
   bounds: { x: number; y: number; width: number; height: number } | null;
   placement: PlacementSettings;
 }

@@ -63,8 +63,24 @@ Accessibility in **Settings → Placement → Enable access**; the shortcut neve
 opens a permission prompt itself. It cancels rather than pasting if focus/target
 changes or keys remain held for two seconds. Apps/OS policy may reject synthetic
 input; you can still paste the copied message manually. Ramble never presses Enter.
-**Escape** also returns focus to the original app when hiding, without copying or
-pasting; Escape in an editor/dialog still cancels that editor/dialog first.
+**Escape** in Message returns to Thoughts without hiding. In Thoughts it hides and
+returns focus to the original app, without copying/pasting. Editors/dialogs consume
+Escape first. **Enter** performs the current text field's action (add/save a thought,
+rebuild from message edits or session style, save settings/templates); **Shift+Enter**
+adds a newline in multiline fields. IME confirmation and held-key repeats do not act.
+In **Settings → General**, choose separate thought/message text sizes (12–28 px).
+Thought size also applies to the composer and inline edits. Sizes persist without
+changing message content or marking it out of date.
+
+**Compact Mode** is a saved toolbar switch for a minimal writing surface: smaller
+controls, icon-only actions, and no branding, preset/new-draft controls, session style
+or footer hints. Capture, thought edits, Build/Cancel, message edits/copy, Settings,
+errors and keyboard shortcuts remain available. View message moves into the toolbar.
+Toggle off to restore secondary controls; presets are also available in Settings.
+It allows resizing down to **360×280** without reducing your chosen text sizes.
+Enabling keeps the window's size; compact summons preserve that size instead of
+applying placement dimensions. Turning it off restores the **560×420** minimum and
+normal placement sizing. Drafts, pending edits and running builds are preserved.
 
 ### Focused-window placement
 
@@ -117,7 +133,7 @@ OpenCode defaults to **openai/gpt-6-luna / medium**; Codex defaults to
 Codex uses `-c model_reasoning_effort="medium"`. Exact support depends on the CLI
 and model. Existing explicit customizations are preserved.
 
-Saved schema-1/2/3/4/5 settings migrate to schema 6. Legacy argv templates are converted
+Saved schema-1/2/3/4/5/6/7 settings migrate to schema 8. Legacy argv templates are converted
 losslessly to command strings; untouched built-ins gain effort options, while
 custom invocations keep their behavior. Empty pristine default presets gain the
 Luna defaults. The original file is backed up on the next settings write.
