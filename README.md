@@ -2,7 +2,7 @@
 
 # Ramble
 
-**Rough thoughts in. One clear message out.**
+**Think Fast. Send Clear.**
 
 Ramble is a small, floating writing window. Jot down what you want to say, turn it
 into a message, then copy it back to the app you were using. Refine the wording
