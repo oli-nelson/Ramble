@@ -420,3 +420,11 @@ keep product requirements in `doc/SPEC.md` and technical design in `doc/TECH_SPE
 - Validated on macOS arm64: 59 offline native tests, rustfmt and diff checks pass.
   Only the macOS target is installed; Windows compilation remains unvalidated locally.
 - Next: rerun hosted Windows validation. No commits or pushes.
+
+## 2026-10-25 — Animated README demo
+- Changed: converted the supplied screen recording into `doc/readme-img/ramble-demo.gif`
+  and embedded it beneath the README introduction; added an Unreleased note.
+- Validated: GIF metadata confirms 1200×471, 709 frames, 59.08 seconds and 2.34 MB;
+  reviewed recording contact sheet, decoded GIF and checked diff whitespace.
+- Next: optionally review animation in GitHub's rendered README. No application
+  code changes, tests, staging or commits.

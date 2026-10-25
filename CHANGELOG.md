@@ -6,6 +6,8 @@ a fresh Unreleased section. Released versions are listed newest first.
 
 ## [Unreleased]
 
+- Add an animated README demo showing the notes-to-message-to-paste workflow.
+
 ## [0.1.0] - 2026-10-25
 
 - Add a user-focused README with an illustrated usage guide, plus getting-started,

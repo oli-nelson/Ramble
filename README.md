@@ -8,6 +8,8 @@ Ramble is a small, floating writing window. Jot down what you want to say, turn 
 into a message, then copy it back to the app you were using. Refine the wording
 without losing your original thoughts.
 
+<img src="doc/readme-img/ramble-demo.gif" alt="Ramble in action: capture rough thoughts, build a clear message, and paste it into another app" width="1200">
+
 ## Why Ramble?
 
 - **Capture thoughts as they come.** Add short notes, paragraphs, or fragments;
