@@ -1,3 +1,5 @@
+<img src="doc/brand/png/ramble-wordmark-primary.png" alt="Ramble" width="720">
+
 # Ramble
 
 **Rough thoughts in. One clear message out.**
