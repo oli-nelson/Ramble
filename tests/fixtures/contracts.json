@@ -1,0 +1,30 @@
+{
+  "placementSettings": { "enabled": true, "default": { "anchor": "center", "offsetX": 0.0, "offsetY": 0.0, "width": 800.0, "height": 600.0 }, "overrides": [{ "applicationId": "com.example.editor", "applicationName": "Editor", "rule": { "anchor": "topRight", "offsetX": -24.0, "offsetY": 16.0, "width": 960.0, "height": null } }] },
+  "harnessOutput": { "runId": "af077100-d21a-4ed6-aa94-c830b188c263", "stdout": "synthetic output", "stderr": "synthetic diagnostic", "stdoutTruncated": false, "stderrTruncated": false },
+  "buildPreview": { "command": "\"/usr/bin/writer\" \"--effort\" \"medium\"", "stdin": "Synthetic prompt\n{{MODEL_ID}} stays literal" },
+  "placementContext": {
+    "applications": [{ "id": "com.example.editor", "name": "Editor" }],
+    "lastApplication": { "id": "com.example.editor", "name": "Editor" },
+    "accessibilityRequired": true,
+    "accessibilityGranted": false,
+    "message": "Using a display fallback."
+  },
+  "request": {
+    "runId": "af077100-d21a-4ed6-aa94-c830b188c263",
+    "draftId": "83ca0606-616d-45d2-966a-994da9fcd685",
+    "source": ["Literal 🦊\n'quotes' $(touch nope)"],
+    "style": "",
+    "presetId": "default-opencode",
+    "expectedSettingsRevision": 0,
+    "revision": { "previousText": "Previous message", "instruction": "Shorten the ask" }
+  },
+  "outcome": {
+    "runId": "af077100-d21a-4ed6-aa94-c830b188c263",
+    "draftId": "83ca0606-616d-45d2-966a-994da9fcd685",
+    "kind": "succeeded",
+    "text": "  Literal message\n```text```  ",
+    "code": null,
+    "message": null,
+    "durationMs": 45
+  }
+}

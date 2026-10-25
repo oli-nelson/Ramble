@@ -1,0 +1,35 @@
+{
+  "opencode": {
+    "executable": "opencode", "promptTransport": "argument", "parser": "opencode-jsonl",
+    "args": [
+      {"kind":"literal","value":"run"}, {"kind":"literal","value":"--standalone"},
+      {"kind":"literal","value":"--format"}, {"kind":"literal","value":"json"},
+      {"kind":"optionalGroup","whenPresent":"model","args":[{"kind":"literal","value":"--model"},{"kind":"parameter","name":"model"}]},
+      {"kind":"parameter","name":"prompt"}
+    ]
+  },
+  "codex": {
+    "executable": "codex", "promptTransport": "stdin", "parser": "codex-jsonl",
+    "args": [
+      {"kind":"literal","value":"exec"}, {"kind":"literal","value":"--json"},
+      {"kind":"literal","value":"--ephemeral"}, {"kind":"literal","value":"--ignore-user-config"},
+      {"kind":"literal","value":"--ignore-rules"}, {"kind":"literal","value":"--skip-git-repo-check"},
+      {"kind":"literal","value":"--sandbox"}, {"kind":"literal","value":"read-only"},
+      {"kind":"optionalGroup","whenPresent":"model","args":[{"kind":"literal","value":"--model"},{"kind":"parameter","name":"model"}]},
+      {"kind":"literal","value":"-"}
+    ]
+  },
+  "claude": {
+    "executable": "claude", "promptTransport": "stdin", "parser": "claude-json",
+    "args": [
+      {"kind":"literal","value":"--print"}, {"kind":"literal","value":"--output-format"},
+      {"kind":"literal","value":"json"}, {"kind":"literal","value":"--safe-mode"},
+      {"kind":"literal","value":"--tools"}, {"kind":"literal","value":""},
+      {"kind":"literal","value":"--strict-mcp-config"}, {"kind":"literal","value":"--mcp-config"},
+      {"kind":"literal","value":"{\"mcpServers\":{}}"}, {"kind":"literal","value":"--disable-slash-commands"},
+      {"kind":"literal","value":"--no-session-persistence"}, {"kind":"literal","value":"--permission-prompts"},
+      {"kind":"literal","value":"none"},
+      {"kind":"optionalGroup","whenPresent":"model","args":[{"kind":"literal","value":"--model"},{"kind":"parameter","name":"model"}]}
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "app": {
+    "windows": [{
+      "label": "main", "title": "Ramble", "width": 640, "height": 480,
+      "minWidth": 560, "minHeight": 420, "alwaysOnTop": true,
+      "visible": false, "center": true, "backgroundColor": "#182127",
+      "titleBarStyle": "Overlay", "hiddenTitle": true,
+      "trafficLightPosition": { "x": 16, "y": 20 }, "shadow": true
+    }]
+  }
+}

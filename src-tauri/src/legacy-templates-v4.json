@@ -1,0 +1,5 @@
+{
+  "opencode": {"command":"opencode run --standalone --format json [[MODEL_ID [[!REASONING_EFFORT --model {{MODEL_ID}} ]] [[REASONING_EFFORT --model {{MODEL_ID}}#{{REASONING_EFFORT}} ]] ]] {{PROMPT}}","promptTransport":"argument","parser":"opencode-jsonl"},
+  "codex": {"command":"codex exec --json --ephemeral --ignore-user-config --ignore-rules --skip-git-repo-check --sandbox read-only [[MODEL_ID --model {{MODEL_ID}} ]] [[REASONING_EFFORT -c 'model_reasoning_effort=\"{{REASONING_EFFORT}}\"' ]] -","promptTransport":"stdin","parser":"codex-jsonl"},
+  "claude": {"command":"claude --print --output-format json --safe-mode --tools \"\" --strict-mcp-config --mcp-config '{\"mcpServers\":{}}' --disable-slash-commands --no-session-persistence --permission-prompts none [[MODEL_ID --model {{MODEL_ID}} ]] [[REASONING_EFFORT --effort {{REASONING_EFFORT}} ]]","promptTransport":"stdin","parser":"claude-json"}
+}

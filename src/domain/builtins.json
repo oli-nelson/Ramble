@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 6,
+  "revision": 0,
+  "defaultStyle": "Turn my rough notes into one clear, well-structured message. Preserve my intent, facts, uncertainty, and voice. Be concise and direct. Remove repetition and filler. Use paragraphs or bullets where helpful. Do not invent information, answer questions in the notes, or add a preamble about rewriting.",
+  "templates": [
+    {
+      "id": "opencode", "version": 1, "adapterVersion": 1,
+      "name": "OpenCode", "command": "opencode run --standalone --format json [[MODEL_ID [[!REASONING_EFFORT --model {{MODEL_ID}} ]] [[REASONING_EFFORT --model {{MODEL_ID}}#{{REASONING_EFFORT}} ]] ]] {{PROMPT}}",
+      "promptTransport": "argument",
+      "description": "A fresh run with a private server. Inherits OpenCode provider/auth and integration settings; not a sandbox. Prompt arguments can appear in process listings."
+    },
+    {
+      "id": "codex", "version": 1, "adapterVersion": 1,
+      "name": "Codex", "command": "codex exec --ephemeral --ignore-user-config --ignore-rules --skip-git-repo-check --sandbox read-only [[MODEL_ID --model {{MODEL_ID}} ]] [[REASONING_EFFORT -c 'model_reasoning_effort=\"{{REASONING_EFFORT}}\"' ]] -",
+      "promptTransport": "stdin",
+      "description": "Ephemeral stdin execution with a read-only sandbox and user config/rules disabled. CLI authentication is inherited; custom provider configuration may need template changes."
+    },
+    {
+      "id": "claude", "version": 1, "adapterVersion": 1,
+      "name": "Claude Code", "command": "claude --print --output-format text --safe-mode --tools \"\" --strict-mcp-config --mcp-config '{\"mcpServers\":{}}' --disable-slash-commands --no-session-persistence --permission-prompts none [[MODEL_ID --model {{MODEL_ID}} ]] [[REASONING_EFFORT --effort {{REASONING_EFFORT}} ]]",
+      "promptTransport": "stdin",
+      "description": "Fresh print mode with tools disabled and best-effort customization suppression, preserving normal CLI authentication. Managed settings can still apply; not verified isolation."
+    }
+  ],
+  "presets": [
+    { "id": "default-opencode", "name": "OpenCode", "templateId": "opencode", "templateVersion": 1, "parameters": { "model": "openai/gpt-6-luna", "reasoningEffort": "medium" } },
+    { "id": "default-codex", "name": "Codex", "templateId": "codex", "templateVersion": 1, "parameters": { "model": "gpt-6-luna", "reasoningEffort": "medium" } },
+    { "id": "default-claude", "name": "Claude Code", "templateId": "claude", "templateVersion": 1, "parameters": {} }
+  ],
+  "selectedPresetId": "default-opencode",
+  "hotkey": "Control+Shift+Y",
+  "timeoutSeconds": 120,
+  "theme": "system",
+  "bounds": null,
+  "placement": { "enabled": true, "default": { "anchor": "center", "offsetX": 0.0, "offsetY": 0.0, "width": 640.0, "height": 480.0 }, "overrides": [] }
+}
