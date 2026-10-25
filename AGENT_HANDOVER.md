@@ -368,3 +368,12 @@ keep product requirements in `doc/SPEC.md` and technical design in `doc/TECH_SPE
   Clippy, rustfmt and diff checks. No Windows target installed; Windows compilation
   and execution are not locally validated.
 - Next: rerun hosted Windows validation/release gates. No commits or pushes.
+
+## 2026-10-25 — Replace deprecated GitHub action runtimes
+- Changed: both workflows use checkout/setup-node v5, upload-artifact v6 and
+  download-artifact v7; verified upstream action manifests declare Node 24.
+  Keep the application build on Node 22 and existing workflow inputs unchanged.
+- Validated: hermetic release-script tests and diff checks pass. Actionlint is
+  unavailable on PATH; hosted workflow execution remains unvalidated.
+- Next: run hosted validation to confirm deprecation warnings are gone. No commits
+  or pushes in this session.

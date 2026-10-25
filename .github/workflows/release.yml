@@ -26,10 +26,10 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       source_sha: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.sha }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Test release automation without network publication
@@ -61,7 +61,7 @@ jobs:
             END { if (found != 1) exit 1 }
           ' artifacts/release-input/CHANGELOG.md > artifacts/release-input/release-notes.md
           printf '\nPackages are unsigned and macOS builds are not notarized. Automated checks do not replace the native manual release checks in doc/VALIDATION.md.\n' >> artifacts/release-input/release-notes.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ramble-release-input
           path: artifacts/release-input/*
@@ -90,11 +90,11 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ needs.validate.outputs.source_sha }}
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -122,12 +122,12 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.validate.outputs.version }}
         run: bash scripts/package-release.sh "$RELEASE_VERSION" "${{ matrix.platform }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ramble-${{ matrix.platform }}
           path: artifacts/release/*.tar.gz
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: release-browser-results-${{ matrix.platform }}
@@ -139,11 +139,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ needs.validate.outputs.source_sha }}
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: ramble-*
           path: artifacts/release

@@ -20,6 +20,7 @@ a fresh Unreleased section. Released versions are listed newest first.
   and a 360×280 window minimum. Keep drafts, running builds, chosen text sizes and
   error recovery intact; restore secondary controls when switched off.
 - Add tested, manually requested macOS and Windows release packaging, with changelog
-  promotion and release notes only after all automated release checks pass.
+  promotion and release notes only after all automated release checks pass. Use
+  Node 24-based GitHub actions to avoid deprecated action runtimes.
 - Fix a Windows compilation error in CLI process creation while preserving hidden
   console windows and process-tree containment.
