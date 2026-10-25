@@ -6,6 +6,8 @@ a fresh Unreleased section. Released versions are listed newest first.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-25
+
 - Add a user-focused README with an illustrated usage guide, plus getting-started,
   configuration, privacy, and troubleshooting guides and separate development instructions.
 - Hide the macOS Dock icon when Ramble's window is dismissed; restore it when
