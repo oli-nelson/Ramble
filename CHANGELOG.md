@@ -6,6 +6,8 @@ a fresh Unreleased section. Released versions are listed newest first.
 
 ## [Unreleased]
 
+- Hide the macOS Dock icon when Ramble's window is dismissed; restore it when
+  reopened, keeping menu-bar and hotkey access available in the background.
 - Add a compact desktop workspace for capturing thoughts, generating messages
   through configurable agent CLIs, and refining the latest generated message while
   keeping drafts in memory. Include denser thought rows and separate saved font sizes

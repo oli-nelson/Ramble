@@ -53,6 +53,8 @@ The core loop is: summon → capture thoughts → edit → build → review/refi
 ### 3.1 Summon and dismiss
 
 - Run as a single-instance background application with a tray/menu-bar entry.
+- On macOS, show the Dock icon only while the Ramble window is open. Hiding via
+  close, Escape or copy shortcuts removes it; menu-bar and hotkey access remain.
 - On macOS use a unified floating surface: overlay/hidden title bar, native traffic
   lights integrated into the app toolbar, native rounded corners/shadow, and a
   draggable toolbar. Preserve resizing and native window controls. Other platforms

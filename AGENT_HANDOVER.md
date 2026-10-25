@@ -377,3 +377,19 @@ keep product requirements in `doc/SPEC.md` and technical design in `doc/TECH_SPE
   unavailable on PATH; hosted workflow execution remains unvalidated.
 - Next: run hosted validation to confirm deprecation warnings are gone. No commits
   or pushes in this session.
+
+## 2026-10-25 — Hide macOS Dock presence with the window
+- Changed: all window-dismiss paths share a main-thread hide helper that switches
+  macOS to Accessory activation policy after hiding. Show restores Regular policy
+  after external focus capture, before showing/focusing. Menu-bar/hotkey access,
+  draft retention and existing focus/paste gates remain intact. Updated SPEC/changelog.
+- Validated on macOS arm64: frontend production build, 62 all-feature native tests,
+  strict all-target/all-feature Clippy, rustfmt and diff checks. No OS activation,
+  paste, real-model calls or packaging performed.
+- Next: restart the native dev host (or rebuild the installed app), then manually
+  check Dock removal on close/Escape/copy/paste, rapid show/hide and reopening via
+  hotkey/menu bar. Native Dock/focus behavior and Windows remain unvalidated.
+- Follow-up: built the unsigned release app with `npm run tauri -- build --bundles
+  app --no-sign --ci`, replaced `/Applications/Ramble.app`, and verified bundle
+  contents match with `diff -qr`. Left the running debug bundle untouched; did not
+  launch the installed app or discard any in-memory drafts.

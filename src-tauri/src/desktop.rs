@@ -87,6 +87,10 @@ fn show_on_main(app: &tauri::AppHandle, intent: ShowIntent) {
             .placement_message
             .lock()
             .unwrap_or_else(|e| e.into_inner()) = message.clone();
+        // Change policy only after capturing the external focus target. Accessory
+        // keeps the menu-bar app running without a Dock icon while hidden.
+        #[cfg(target_os = "macos")]
+        let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
@@ -383,10 +387,26 @@ fn hide_window(app: tauri::AppHandle) {
     app.state::<DesktopState>()
         .paste_epoch
         .fetch_add(1, Ordering::Relaxed);
-    save_bounds(&app);
-    if let Some(w) = app.get_webview_window("main") {
-        let _ = w.hide();
-    }
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        save_bounds(&handle);
+        if let Some(window) = handle.get_webview_window("main") {
+            let _ = hide_main_window(&handle, &window);
+        }
+    });
+}
+
+/// All dismiss paths share this main-thread operation. Do not remove the Dock
+/// presence if hiding fails, and switch policy before restoring external focus.
+fn hide_main_window(app: &tauri::AppHandle, window: &tauri::WebviewWindow) -> Result<(), String> {
+    window
+        .hide()
+        .map_err(|_| "Ramble could not hide its window.".to_string())?;
+    #[cfg(target_os = "macos")]
+    let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+    #[cfg(not(target_os = "macos"))]
+    let _ = app;
+    Ok(())
 }
 
 #[tauri::command]
@@ -408,11 +428,7 @@ async fn hide_and_restore_focus(app: tauri::AppHandle) -> Result<(), String> {
         desktop_platform::hide_then_restore(
             was_foreground,
             target.as_ref(),
-            || {
-                window
-                    .hide()
-                    .map_err(|_| "Ramble could not hide its window.".into())
-            },
+            || hide_main_window(&handle, &window),
             desktop_platform::restore_focus,
         )
     })
@@ -448,11 +464,7 @@ async fn hide_restore_and_paste(app: tauri::AppHandle) -> Result<(), String> {
         desktop_platform::hide_then_restore(
             true,
             Some(&target),
-            || {
-                window
-                    .hide()
-                    .map_err(|_| "Ramble could not hide its window.".into())
-            },
+            || hide_main_window(&handle, &window),
             desktop_platform::restore_focus,
         )?;
         Ok((epoch, target))
