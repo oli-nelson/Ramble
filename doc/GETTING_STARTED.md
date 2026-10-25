@@ -1,6 +1,6 @@
 # Getting started with Ramble
 
-[Back to README](../README.md) · [Using Ramble](USER_GUIDE.md)
+[Back to README](../README.md) · [Using Ramble](../README.md#using-ramble)
 
 ## 1. Install Ramble
 
@@ -74,4 +74,4 @@ Want a change? Type an instruction such as “shorten the opening” in
 It discards the previous draft without confirmation and cancels a running build.
 Hiding preserves a draft; quitting or a crash does not.
 
-Next: [revisions, keyboard shortcuts, and Compact Mode](USER_GUIDE.md).
+Next: [revisions, keyboard shortcuts, and Compact Mode](../README.md#using-ramble).

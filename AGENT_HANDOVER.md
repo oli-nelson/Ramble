@@ -405,6 +405,14 @@ keep product requirements in `doc/SPEC.md` and technical design in `doc/TECH_SPE
   published packages and native manual validation are available. Staged user images
   were left untouched; no commits or staging performed.
 
+## 2026-10-25 — Consolidate everyday usage into README
+- Changed: merged the illustrated user guide into README with section navigation,
+  removed the standalone guide and duplicate screenshots, and updated incoming links.
+  Revised the existing Unreleased documentation entry to reflect the consolidated guide.
+- Validated: local Markdown links, anchors, image targets, and diff whitespace checks.
+  Documentation-only; no application tests or model calls.
+- Next: review the expanded README on GitHub. No staging or commits performed.
+
 ## 2026-10-25 — Windows running-app enumeration compilation fix
 - Changed: explicitly type the application vector as `Vec<Application>` before
   passing it through EnumWindows' opaque callback data; fixes E0282 at sorting.

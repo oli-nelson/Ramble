@@ -6,8 +6,8 @@ a fresh Unreleased section. Released versions are listed newest first.
 
 ## [Unreleased]
 
-- Add illustrated getting-started, usage, configuration, privacy, and troubleshooting
-  guides, with a user-focused README and separate source-development instructions.
+- Add a user-focused README with an illustrated usage guide, plus getting-started,
+  configuration, privacy, and troubleshooting guides and separate development instructions.
 - Hide the macOS Dock icon when Ramble's window is dismissed; restore it when
   reopened, keeping menu-bar and hotkey access available in the background.
 - Add a compact desktop workspace for capturing thoughts, generating messages
