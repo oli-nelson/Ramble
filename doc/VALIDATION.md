@@ -107,3 +107,15 @@ validation pass. Continue using portable APIs and the Windows containment path.
 
 See `../AGENT_HANDOVER.md` for final executed commands and outcomes. Automated
 browser checks must never be described as Windows or native desktop validation.
+
+## Release automation
+
+The manual release workflow and recovery procedure are in [RELEASES.md](RELEASES.md).
+Local hermetic script tests cover version/changelog validation, aligned manifest
+versions, fake native-installer archives, dispatch-only helpers, branch races,
+atomic-push rejection, same-run draft recovery, immutable published assets and
+prerelease flags. Workflow definitions pass actionlint v1.7.12; Bash scripts pass
+syntax checks. These checks do not build real installers or run GitHub Actions.
+The first hosted run must still validate macOS Intel/Apple Silicon and Windows
+builds/installers; unsigned packages do not satisfy signing/notarization or the
+manual release gates above. No workflow has been dispatched as part of this change.

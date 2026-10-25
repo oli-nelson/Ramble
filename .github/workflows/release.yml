@@ -1,0 +1,158 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version, e.g. 0.1.0 or 0.2.0-rc.1 (unsigned packages)'
+        required: true
+        type: string
+      expected_sha:
+        description: 'Optional source SHA guard (supplied by the local helper)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ramble-release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      source_sha: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test release automation without network publication
+        run: bash scripts/test-release.sh
+      - id: version
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$RELEASE_REF_TYPE" == branch ]] || { echo 'error: select a branch, not a tag'; exit 1; }
+          source scripts/release-version.sh
+          version=$(release_version "$RELEASE_VERSION")
+          [[ -z "$EXPECTED_SHA" || "$EXPECTED_SHA" == "$SOURCE_SHA" ]] || { echo 'error: source changed before dispatch'; exit 1; }
+          [[ "$(git rev-parse HEAD)" == "$SOURCE_SHA" ]]
+          [[ -z "$(git ls-remote --tags origin "refs/tags/v$version")" ]] || { echo 'error: tag exists; retry failed jobs in the same run or choose a new version'; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          mkdir -p artifacts/release-input
+          bash scripts/release-changelog.sh "$version" CHANGELOG.md > artifacts/release-input/CHANGELOG.md
+          awk -v version="$version" '
+            /^## / {
+              if (index($0, "## [" version "] - ") == 1) { found++; section = 1; next }
+              section = 0
+            }
+            section { print }
+            END { if (found != 1) exit 1 }
+          ' artifacts/release-input/CHANGELOG.md > artifacts/release-input/release-notes.md
+          printf '\nPackages are unsigned and macOS builds are not notarized. Automated checks do not replace the native manual release checks in doc/VALIDATION.md.\n' >> artifacts/release-input/release-notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ramble-release-input
+          path: artifacts/release-input/*
+          if-no-files-found: error
+
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            platform: macos-x64
+            bundles: dmg
+          - os: macos-15
+            target: aarch64-apple-darwin
+            platform: macos-arm64
+            bundles: dmg
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: windows-x64
+            bundles: nsis
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.95.0'
+          targets: ${{ matrix.target }}
+          components: rustfmt, clippy
+      - run: npm ci
+      - name: Set embedded release version in the build checkout only
+        env:
+          RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+        run: node scripts/set-release-version.mjs "$RELEASE_VERSION"
+      - run: npm run build
+      - run: npm test
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked --all-features
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features test-harness
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets --all-features -- -D warnings
+      - run: npx playwright install chromium
+      - run: npm run test:e2e
+      - name: Build unsigned production installer (no test-harness feature)
+        run: npm run tauri -- build --ci --no-sign --target "${{ matrix.target }}" --bundles "${{ matrix.bundles }}"
+      - name: Package installer
+        env:
+          RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+        run: bash scripts/package-release.sh "$RELEASE_VERSION" "${{ matrix.platform }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ramble-${{ matrix.platform }}
+          path: artifacts/release/*.tar.gz
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: release-browser-results-${{ matrix.platform }}
+          path: test-results/
+
+  publish:
+    needs: [validate, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.source_sha }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ramble-*
+          path: artifacts/release
+          merge-multiple: true
+      - name: Finalize changelog, tag, and GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+          SOURCE_SHA: ${{ needs.validate.outputs.source_sha }}
+          RELEASE_BRANCH: ${{ github.ref_name }}
+        run: bash scripts/finalize-release.sh "$RELEASE_VERSION" "$RELEASE_BRANCH" "$SOURCE_SHA" artifacts/release

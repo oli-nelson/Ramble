@@ -75,6 +75,18 @@
 
 ## Working practices
 
+- When making changes, update the `Unreleased` section of [CHANGELOG.md](CHANGELOG.md)
+  with concise, user-facing entries for noteworthy changes (features, fixes,
+  breaking changes, or meaningful operational/documentation changes). Skip routine
+  internal churn and avoid duplicate entries. Consolidate related changes into
+  coherent entries rather than listing each commit. Revise or remove existing
+  Unreleased entries when later changes supersede them, so the section describes
+  the current behavior rather than obsolete intermediate implementations. Keep
+  noteworthy breaking changes and migration guidance explicit.
+  Keep previously released sections unchanged; only after all release builds and
+  tests pass does GitHub Actions promote `Unreleased` into a dated version section
+  and create a new empty `Unreleased` section. The local release helper only
+  dispatches that workflow. See `doc/RELEASES.md` for release operations.
 - Read `AGENT_HANDOVER.md` at the start of each session. Before ending a session
   with meaningful development progress, append brief dated notes: what changed,
   validation performed, unfinished work/blockers, and the next useful action.

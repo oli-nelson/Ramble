@@ -549,11 +549,29 @@ snapshot to compute whether it is out of date.
   explain permissions only if the chosen implementation actually requires them.
 - Target a warm summon within 300 ms on a typical development machine. This is
   an implementation target, not a measured guarantee. Model latency is external.
-- Initial packaging target: macOS Apple Silicon and Windows x64. Intel macOS and
-  Windows ARM64 are follow-up candidates, pending user confirmation. Exact minimum
-  OS versions, signing/notarization, and distribution are pre-release decisions.
+- Automated packaging targets: macOS Apple Silicon, Intel macOS and Windows x64.
+  Windows ARM64 remains a follow-up candidate, pending user confirmation. Exact
+  minimum OS versions, signing/notarization, and native support approval remain
+  pre-release decisions; producing a package is not manual platform validation.
 
-### 8.1 Selected visual identity
+### 8.1 Release automation
+
+- Maintain concise, current, user-facing changes under `CHANGELOG.md` → `Unreleased`;
+  preserve previously released sections. Build and test before promoting release notes.
+- A manually dispatched GitHub Actions workflow builds unsigned macOS Apple Silicon,
+  macOS Intel and Windows x64 installers, with offline frontend/native/browser tests
+  on each native runner. This packaging matrix does not assert manual platform support.
+- Prepare release notes without changing tracked files; only after every automated
+  release gate succeeds may CI promote `Unreleased` into a dated version section,
+  add a fresh empty `Unreleased`, atomically push a changelog-only commit and annotated
+  version tag, and publish packages/checksums with those notes. Source-branch races
+  must fail closed; same-run publication retries must not overwrite published assets.
+- The local helper only dispatches the workflow from clean, pushed source. Build
+  checkouts embed the requested version without committing development-version bumps.
+  Signing/notarization and native manual release checks remain separate requirements;
+  see [release operations](RELEASES.md) and [validation](VALIDATION.md).
+
+### 8.2 Selected visual identity
 
 The selected Ramble logo direction is option 4 from the icon exploration sheet:
 a speech bubble with three thought-lines converging into one. Reusable vector,

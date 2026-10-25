@@ -294,3 +294,22 @@ keep product requirements in `doc/SPEC.md` and technical design in `doc/TECH_SPE
   shortcut in a disposable target field, release the keys, verify one paste/no send.
   Also check Escape focus return, denied access, app switching, held keys, re-summon
   cancellation and protected/elevated targets. No commits or pushes.
+
+## 2026-10-25 — Changelog and gated release automation
+- Changed: added Unreleased maintenance guidance in AGENTS.md, seeded
+  CHANGELOG.md, and added a manual Release workflow plus a dispatch-only local
+  helper. macOS Intel/Apple Silicon and Windows x64 jobs run offline checks before
+  packaging unsigned DMG/NSIS installers; build-only version stamping aligns npm,
+  Cargo and Tauri without committing manifest bumps.
+- Changed: finalization promotes only the changelog after all jobs pass, atomically
+  pushes its commit/tag with an exact source lease, and publishes notes/packages/
+  checksums via an owned draft. Same-run retries guard run/source/changelog identity;
+  published assets are immutable. See doc/RELEASES.md for setup and recovery.
+- Validated: hermetic release-script tests (disposable remotes/fake gh/installers),
+  Bash syntax checks, actionlint v1.7.12 for both workflows, and diff checks. Tests
+  include branch advance/races, rejected pushes, failed upload/retry, prerelease
+  flags, changelog preservation and missing/ambiguous packages. No real GitHub
+  release, app installer build, native input or model call was performed.
+- Next: review/commit/push, ensure repository rules permit the publish job's
+  changelog/tag push, then opt in to a first hosted release run. Signing/notarization,
+  hosted cross-platform execution and manual installation remain unvalidated.

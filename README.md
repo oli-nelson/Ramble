@@ -178,9 +178,12 @@ leaving an existing desktop dev server on port 1420 untouched.
 npm run tauri -- build
 ```
 
-Packaging is unsigned development packaging, not a distribution pipeline.
-The app identifier `com.ramble.desktop`, minimum macOS 12.0, Windows minimum OS,
-signing/notarization, and release distribution still need release approval.
+For versioned macOS and Windows packages, use the manually requested
+[release workflow](doc/RELEASES.md): `bash scripts/release.sh 0.1.0` from a clean,
+committed and pushed branch. It promotes [Unreleased notes](CHANGELOG.md) only
+after all release builds/tests pass. Packages remain unsigned and macOS builds
+are not notarized. The app identifier `com.ramble.desktop`, minimum OS support,
+signing/notarization and native manual checks still need release approval.
 
 ## Privacy
 
