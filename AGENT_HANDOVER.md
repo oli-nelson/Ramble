@@ -392,4 +392,15 @@ keep product requirements in `doc/SPEC.md` and technical design in `doc/TECH_SPE
 - Follow-up: built the unsigned release app with `npm run tauri -- build --bundles
   app --no-sign --ci`, replaced `/Applications/Ramble.app`, and verified bundle
   contents match with `diff -qr`. Left the running debug bundle untouched; did not
-  launch the installed app or discard any in-memory drafts.
+   launch the installed app or discard any in-memory drafts.
+
+## 2026-10-25 — Illustrated end-user documentation
+- Changed: rewrote README around installation and the writing workflow; added
+  GETTING_STARTED, USER_GUIDE, CONFIGURATION, TROUBLESHOOTING, and PRIVACY guides
+  using the supplied screenshots. Moved source setup/testing into DEVELOPMENT.
+  Kept engineering specs, release operations, and validation records authoritative.
+- Validation: reviewed against SPEC and release artifact naming; checked local
+  Markdown links/image targets. No application code, model calls, or native tests.
+- Next: review rendered documentation and update installation/support claims when
+  published packages and native manual validation are available. Staged user images
+  were left untouched; no commits or staging performed.
